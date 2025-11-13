@@ -4,6 +4,8 @@ import com.example.common.enums.InvoiceStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -14,6 +16,7 @@ public class InvoiceDTO {
     private Long id;
     private String number;
     private Long contractId;
+    private Long customerId;
     private String customerName;
     private BigDecimal amount;
     private LocalDate issueDate;
@@ -21,6 +24,7 @@ public class InvoiceDTO {
     private InvoiceStatus status;
     private LocalDate paymentDate;
     private String notes;
+    private List<InvoiceLineDTO> lines = new ArrayList<>();
 
     public InvoiceDTO() {
     }
@@ -28,16 +32,19 @@ public class InvoiceDTO {
     public InvoiceDTO(Long id,
                       String number,
                       Long contractId,
+                      Long customerId,
                       String customerName,
                       BigDecimal amount,
                       LocalDate issueDate,
                       LocalDate dueDate,
                       InvoiceStatus status,
                       LocalDate paymentDate,
-                      String notes) {
+                      String notes,
+                      List<InvoiceLineDTO> lines) {
         this.id = id;
         this.number = number;
         this.contractId = contractId;
+        this.customerId = customerId;
         this.customerName = customerName;
         this.amount = amount;
         this.issueDate = issueDate;
@@ -45,6 +52,9 @@ public class InvoiceDTO {
         this.status = status;
         this.paymentDate = paymentDate;
         this.notes = notes;
+        if (lines != null) {
+            this.lines = new ArrayList<>(lines);
+        }
     }
 
     public Long getId() {
@@ -69,6 +79,14 @@ public class InvoiceDTO {
 
     public void setContractId(Long contractId) {
         this.contractId = contractId;
+    }
+
+    public Long getCustomerId() {
+        return customerId;
+    }
+
+    public void setCustomerId(Long customerId) {
+        this.customerId = customerId;
     }
 
     public String getCustomerName() {
@@ -127,6 +145,14 @@ public class InvoiceDTO {
         this.notes = notes;
     }
 
+    public List<InvoiceLineDTO> getLines() {
+        return lines;
+    }
+
+    public void setLines(List<InvoiceLineDTO> lines) {
+        this.lines = lines != null ? new ArrayList<>(lines) : new ArrayList<>();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -150,6 +176,7 @@ public class InvoiceDTO {
                 "id=" + id +
                 ", number='" + number + '\'' +
                 ", contractId=" + contractId +
+                ", customerId=" + customerId +
                 ", customerName='" + customerName + '\'' +
                 ", amount=" + amount +
                 ", issueDate=" + issueDate +
@@ -157,6 +184,7 @@ public class InvoiceDTO {
                 ", status=" + status +
                 ", paymentDate=" + paymentDate +
                 ", notes='" + notes + '\'' +
+                ", lines=" + lines +
                 '}';
     }
 }

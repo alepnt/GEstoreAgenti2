@@ -5,5 +5,7 @@ package com.example.client.model;
  */
 public enum DataChangeType {
     INVOICE,
-    CONTRACT
+    CONTRACT,
+    CUSTOMER,
+    ARTICLE
 }

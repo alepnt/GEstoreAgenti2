@@ -2,20 +2,30 @@ package com.example.client.service;
 
 import com.example.client.command.CommandExecutor;
 import com.example.client.command.CommandHistoryCaretaker;
+import com.example.client.command.CreateArticleCommand;
 import com.example.client.command.CreateContractCommand;
+import com.example.client.command.CreateCustomerCommand;
 import com.example.client.command.CreateInvoiceCommand;
+import com.example.client.command.DeleteArticleCommand;
 import com.example.client.command.DeleteContractCommand;
+import com.example.client.command.DeleteCustomerCommand;
 import com.example.client.command.DeleteInvoiceCommand;
+import com.example.client.command.LoadArticlesCommand;
 import com.example.client.command.LoadContractsCommand;
+import com.example.client.command.LoadCustomersCommand;
 import com.example.client.command.LoadInvoicesCommand;
 import com.example.client.command.RegisterInvoicePaymentCommand;
+import com.example.client.command.UpdateArticleCommand;
 import com.example.client.command.UpdateContractCommand;
+import com.example.client.command.UpdateCustomerCommand;
 import com.example.client.command.UpdateInvoiceCommand;
 import com.example.client.model.DataChangeEvent;
 import com.example.client.model.DataChangeType;
 import com.example.client.model.DocumentHistorySearchCriteria;
 import com.example.common.dto.AgentStatisticsDTO;
+import com.example.common.dto.ArticleDTO;
 import com.example.common.dto.ContractDTO;
+import com.example.common.dto.CustomerDTO;
 import com.example.common.dto.DocumentHistoryDTO;
 import com.example.common.dto.DocumentHistoryPageDTO;
 import com.example.common.dto.InvoiceDTO;
@@ -107,6 +117,48 @@ public class DataCacheService {
         executor.execute(new DeleteContractCommand(id));
         invalidateHistory();
         publishChange(DataChangeType.CONTRACT);
+    }
+
+    public List<CustomerDTO> getCustomers() {
+        return executor.execute(new LoadCustomersCommand()).value();
+    }
+
+    public CustomerDTO createCustomer(CustomerDTO customerDTO) {
+        CustomerDTO result = executor.execute(new CreateCustomerCommand(customerDTO)).value();
+        publishChange(DataChangeType.CUSTOMER);
+        return result;
+    }
+
+    public CustomerDTO updateCustomer(Long id, CustomerDTO customerDTO) {
+        CustomerDTO result = executor.execute(new UpdateCustomerCommand(id, customerDTO)).value();
+        publishChange(DataChangeType.CUSTOMER);
+        return result;
+    }
+
+    public void deleteCustomer(Long id) {
+        executor.execute(new DeleteCustomerCommand(id));
+        publishChange(DataChangeType.CUSTOMER);
+    }
+
+    public List<ArticleDTO> getArticles() {
+        return executor.execute(new LoadArticlesCommand()).value();
+    }
+
+    public ArticleDTO createArticle(ArticleDTO articleDTO) {
+        ArticleDTO result = executor.execute(new CreateArticleCommand(articleDTO)).value();
+        publishChange(DataChangeType.ARTICLE);
+        return result;
+    }
+
+    public ArticleDTO updateArticle(Long id, ArticleDTO articleDTO) {
+        ArticleDTO result = executor.execute(new UpdateArticleCommand(id, articleDTO)).value();
+        publishChange(DataChangeType.ARTICLE);
+        return result;
+    }
+
+    public void deleteArticle(Long id) {
+        executor.execute(new DeleteArticleCommand(id));
+        publishChange(DataChangeType.ARTICLE);
     }
 
     public List<DocumentHistoryDTO> getInvoiceHistory(Long id) {
