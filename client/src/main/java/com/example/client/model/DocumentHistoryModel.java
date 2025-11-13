@@ -13,16 +13,44 @@ import java.time.Instant;
  */
 public class DocumentHistoryModel {
 
+    private final StringProperty documentType = new SimpleStringProperty();
+    private final StringProperty documentId = new SimpleStringProperty();
     private final StringProperty action = new SimpleStringProperty();
     private final StringProperty description = new SimpleStringProperty();
     private final ObjectProperty<Instant> createdAt = new SimpleObjectProperty<>();
 
     public static DocumentHistoryModel fromDto(DocumentHistoryDTO dto) {
         DocumentHistoryModel model = new DocumentHistoryModel();
+        model.setDocumentType(dto.getDocumentType() != null ? dto.getDocumentType().name() : "");
+        model.setDocumentId(dto.getDocumentId() != null ? dto.getDocumentId().toString() : "");
         model.setAction(dto.getAction().name());
         model.setDescription(dto.getDescription());
         model.setCreatedAt(dto.getCreatedAt());
         return model;
+    }
+
+    public String getDocumentType() {
+        return documentType.get();
+    }
+
+    public void setDocumentType(String value) {
+        documentType.set(value);
+    }
+
+    public StringProperty documentTypeProperty() {
+        return documentType;
+    }
+
+    public String getDocumentId() {
+        return documentId.get();
+    }
+
+    public void setDocumentId(String value) {
+        documentId.set(value);
+    }
+
+    public StringProperty documentIdProperty() {
+        return documentId;
     }
 
     public String getAction() {

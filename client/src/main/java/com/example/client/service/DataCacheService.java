@@ -13,9 +13,11 @@ import com.example.client.command.UpdateContractCommand;
 import com.example.client.command.UpdateInvoiceCommand;
 import com.example.client.model.DataChangeEvent;
 import com.example.client.model.DataChangeType;
+import com.example.client.model.DocumentHistorySearchCriteria;
 import com.example.common.dto.AgentStatisticsDTO;
 import com.example.common.dto.ContractDTO;
 import com.example.common.dto.DocumentHistoryDTO;
+import com.example.common.dto.DocumentHistoryPageDTO;
 import com.example.common.dto.InvoiceDTO;
 import com.example.common.dto.InvoicePaymentRequest;
 import com.example.common.dto.TeamStatisticsDTO;
@@ -37,6 +39,7 @@ public class DataCacheService {
     private final CommandExecutor executor;
     private final Map<Integer, AgentStatisticsDTO> agentStatsCache = new ConcurrentHashMap<>();
     private final Map<Integer, TeamStatisticsDTO> teamStatsCache = new ConcurrentHashMap<>();
+    private final Map<String, DocumentHistoryPageDTO> historyCache = new ConcurrentHashMap<>();
 
     public DataCacheService() {
         this(new BackendGateway());
@@ -54,6 +57,7 @@ public class DataCacheService {
     public InvoiceDTO createInvoice(InvoiceDTO invoiceDTO) {
         InvoiceDTO result = executor.execute(new CreateInvoiceCommand(invoiceDTO)).value();
         invalidateStatistics();
+        invalidateHistory();
         publishChange(DataChangeType.INVOICE);
         return result;
     }
@@ -61,6 +65,7 @@ public class DataCacheService {
     public InvoiceDTO updateInvoice(Long id, InvoiceDTO invoiceDTO) {
         InvoiceDTO result = executor.execute(new UpdateInvoiceCommand(id, invoiceDTO)).value();
         invalidateStatistics();
+        invalidateHistory();
         publishChange(DataChangeType.INVOICE);
         return result;
     }
@@ -68,12 +73,14 @@ public class DataCacheService {
     public void deleteInvoice(Long id) {
         executor.execute(new DeleteInvoiceCommand(id));
         invalidateStatistics();
+        invalidateHistory();
         publishChange(DataChangeType.INVOICE);
     }
 
     public InvoiceDTO registerPayment(Long id, InvoicePaymentRequest paymentRequest) {
         InvoiceDTO result = executor.execute(new RegisterInvoicePaymentCommand(id, paymentRequest)).value();
         invalidateStatistics();
+        invalidateHistory();
         publishChange(DataChangeType.INVOICE);
         return result;
     }
@@ -84,18 +91,21 @@ public class DataCacheService {
 
     public ContractDTO createContract(ContractDTO contractDTO) {
         ContractDTO result = executor.execute(new CreateContractCommand(contractDTO)).value();
+        invalidateHistory();
         publishChange(DataChangeType.CONTRACT);
         return result;
     }
 
     public ContractDTO updateContract(Long id, ContractDTO contractDTO) {
         ContractDTO result = executor.execute(new UpdateContractCommand(id, contractDTO)).value();
+        invalidateHistory();
         publishChange(DataChangeType.CONTRACT);
         return result;
     }
 
     public void deleteContract(Long id) {
         executor.execute(new DeleteContractCommand(id));
+        invalidateHistory();
         publishChange(DataChangeType.CONTRACT);
     }
 
@@ -132,6 +142,42 @@ public class DataCacheService {
     public void invalidateStatistics() {
         agentStatsCache.clear();
         teamStatsCache.clear();
+    }
+
+    public DocumentHistoryPageDTO searchDocumentHistory(DocumentHistorySearchCriteria criteria, int page, int size) {
+        if (criteria == null) {
+            return new DocumentHistoryPageDTO();
+        }
+        String key = criteria.cacheKey(page, size);
+        return historyCache.computeIfAbsent(key,
+                unused -> backendGateway.searchDocumentHistory(criteria.getDocumentType(),
+                        criteria.getDocumentId(),
+                        criteria.getActions(),
+                        criteria.getFrom(),
+                        criteria.getTo(),
+                        criteria.getSearchText(),
+                        page,
+                        size));
+    }
+
+    public byte[] exportDocumentHistory(DocumentHistorySearchCriteria criteria) {
+        if (criteria == null) {
+            return new byte[0];
+        }
+        return backendGateway.exportDocumentHistory(criteria.getDocumentType(),
+                criteria.getDocumentId(),
+                criteria.getActions(),
+                criteria.getFrom(),
+                criteria.getTo(),
+                criteria.getSearchText());
+    }
+
+    public byte[] downloadClosedInvoiceReport(java.time.LocalDate from, java.time.LocalDate to, Long agentId) {
+        return backendGateway.downloadClosedInvoicesReport(from, to, agentId);
+    }
+
+    public void invalidateHistory() {
+        historyCache.clear();
     }
 
     public void subscribeDataChanges(Observer<DataChangeEvent> observer) {

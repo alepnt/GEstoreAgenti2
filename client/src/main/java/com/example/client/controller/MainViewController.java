@@ -5,11 +5,13 @@ import com.example.client.model.ContractModel;
 import com.example.client.model.DataChangeEvent;
 import com.example.client.model.DataChangeType;
 import com.example.client.model.DocumentHistoryModel;
+import com.example.client.model.DocumentHistorySearchCriteria;
 import com.example.client.model.InvoiceModel;
 import com.example.client.service.DataCacheService;
 import com.example.client.service.NotificationService;
 import com.example.common.dto.ContractDTO;
 import com.example.common.dto.DocumentHistoryDTO;
+import com.example.common.dto.DocumentHistoryPageDTO;
 import com.example.common.dto.InvoiceDTO;
 import com.example.common.dto.InvoicePaymentRequest;
 import com.example.common.dto.AgentCommissionDTO;
@@ -19,6 +21,7 @@ import com.example.common.dto.TeamCommissionDTO;
 import com.example.common.dto.TeamStatisticsDTO;
 import com.example.common.dto.NotificationMessage;
 import com.example.common.enums.ContractStatus;
+import com.example.common.enums.DocumentAction;
 import com.example.common.enums.DocumentType;
 import com.example.common.enums.InvoiceStatus;
 import com.example.common.observer.Observer;
@@ -41,11 +44,15 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.stage.FileChooser;
 import javafx.util.StringConverter;
 
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.Month;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -56,6 +63,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Locale;
 import java.util.stream.Collectors;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
  * Controller principale della dashboard JavaFX.
@@ -67,6 +76,7 @@ public class MainViewController {
     private final ObservableList<InvoiceModel> invoiceItems = FXCollections.observableArrayList();
     private final ObservableList<ContractModel> contractItems = FXCollections.observableArrayList();
     private final ObservableList<DocumentHistoryModel> historyItems = FXCollections.observableArrayList();
+    private final ObservableList<DocumentHistoryModel> historySearchItems = FXCollections.observableArrayList();
     private final Observer<NotificationMessage> notificationObserver = this::onNotification;
     private final Observer<CommandMemento> historyObserver = this::onCommandExecuted;
     private final Observer<DataChangeEvent> dataChangeObserver = this::onDataChanged;
@@ -75,6 +85,9 @@ public class MainViewController {
     private DocumentType currentHistoryType;
     private Long currentHistoryId;
     private boolean updatingStatsYear;
+    private int historyCurrentPage;
+    private long historyTotalPages;
+    private DocumentHistorySearchCriteria historyCurrentCriteria = new DocumentHistorySearchCriteria();
 
     @FXML
     private TabPane mainTabPane;
@@ -132,6 +145,43 @@ public class MainViewController {
     private TableColumn<DocumentHistoryModel, String> historyDescriptionColumn;
     @FXML
     private TableColumn<DocumentHistoryModel, String> historyTimestampColumn;
+
+    @FXML
+    private ComboBox<DocumentType> historyTypeCombo;
+    @FXML
+    private ComboBox<DocumentAction> historyActionCombo;
+    @FXML
+    private TextField historyDocumentIdField;
+    @FXML
+    private TextField historySearchField;
+    @FXML
+    private DatePicker historyFromDatePicker;
+    @FXML
+    private DatePicker historyToDatePicker;
+    @FXML
+    private ComboBox<Integer> historyPageSizeCombo;
+    @FXML
+    private TextField historyAgentIdField;
+    @FXML
+    private TableView<DocumentHistoryModel> historySearchTable;
+    @FXML
+    private TableColumn<DocumentHistoryModel, String> historySearchTypeColumn;
+    @FXML
+    private TableColumn<DocumentHistoryModel, String> historySearchDocumentIdColumn;
+    @FXML
+    private TableColumn<DocumentHistoryModel, String> historySearchActionColumn;
+    @FXML
+    private TableColumn<DocumentHistoryModel, String> historySearchDescriptionColumn;
+    @FXML
+    private TableColumn<DocumentHistoryModel, String> historySearchTimestampColumn;
+    @FXML
+    private Button historyPrevButton;
+    @FXML
+    private Button historyNextButton;
+    @FXML
+    private Label historyPageInfoLabel;
+    @FXML
+    private Label historyTotalLabel;
 
     @FXML
     private TextField contractAgentField;
@@ -209,9 +259,30 @@ public class MainViewController {
         historyDescriptionColumn.setCellValueFactory(new PropertyValueFactory<>("description"));
         historyTimestampColumn.setCellValueFactory(cell -> new SimpleStringProperty(formatInstant(cell.getValue().getCreatedAt())));
 
+        if (historyTypeCombo != null) {
+            historyTypeCombo.getItems().setAll(DocumentType.values());
+        }
+        if (historyActionCombo != null) {
+            historyActionCombo.getItems().setAll(DocumentAction.values());
+        }
+        if (historyPageSizeCombo != null) {
+            historyPageSizeCombo.getItems().setAll(25, 50, 100);
+            historyPageSizeCombo.setValue(25);
+        }
+        if (historySearchTable != null) {
+            historySearchTypeColumn.setCellValueFactory(new PropertyValueFactory<>("documentType"));
+            historySearchDocumentIdColumn.setCellValueFactory(new PropertyValueFactory<>("documentId"));
+            historySearchActionColumn.setCellValueFactory(new PropertyValueFactory<>("action"));
+            historySearchDescriptionColumn.setCellValueFactory(new PropertyValueFactory<>("description"));
+            historySearchTimestampColumn.setCellValueFactory(cell -> new SimpleStringProperty(formatInstant(cell.getValue().getCreatedAt())));
+            historySearchTable.setItems(historySearchItems);
+        }
+
         invoiceTable.setItems(invoiceItems);
         contractTable.setItems(contractItems);
         historyTable.setItems(historyItems);
+
+        updateHistoryPagination(null);
 
         invoiceTable.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, selected) -> {
             if (selected != null) {
@@ -265,6 +336,7 @@ public class MainViewController {
         refreshInvoices();
         refreshContracts();
         refreshStatistics();
+        refreshHistorySearch(true);
         notificationService.publish(new NotificationMessage("refresh", "Dati aggiornati", Instant.now()));
     }
 
@@ -372,6 +444,74 @@ public class MainViewController {
         notificationService.publish(new NotificationMessage("contract", "Contratto eliminato", Instant.now()));
     }
 
+    @FXML
+    public void onApplyHistoryFilters() {
+        refreshHistorySearch(true);
+        notificationService.publish(new NotificationMessage("history", "Filtri applicati", Instant.now()));
+    }
+
+    @FXML
+    public void onResetHistoryFilters() {
+        if (historyTypeCombo != null) {
+            historyTypeCombo.setValue(null);
+        }
+        if (historyActionCombo != null) {
+            historyActionCombo.setValue(null);
+        }
+        if (historyDocumentIdField != null) {
+            historyDocumentIdField.clear();
+        }
+        if (historySearchField != null) {
+            historySearchField.clear();
+        }
+        if (historyFromDatePicker != null) {
+            historyFromDatePicker.setValue(null);
+        }
+        if (historyToDatePicker != null) {
+            historyToDatePicker.setValue(null);
+        }
+        if (historyAgentIdField != null) {
+            historyAgentIdField.clear();
+        }
+        if (historyPageSizeCombo != null) {
+            historyPageSizeCombo.setValue(25);
+        }
+        refreshHistorySearch(true);
+        notificationService.publish(new NotificationMessage("history", "Filtri ripristinati", Instant.now()));
+    }
+
+    @FXML
+    public void onHistoryPrevPage() {
+        if (historyCurrentPage > 0) {
+            historyCurrentPage--;
+            refreshHistorySearch(false);
+        }
+    }
+
+    @FXML
+    public void onHistoryNextPage() {
+        if (historyCurrentPage + 1 < historyTotalPages) {
+            historyCurrentPage++;
+            refreshHistorySearch(false);
+        }
+    }
+
+    @FXML
+    public void onHistoryExportCsv() {
+        DocumentHistorySearchCriteria criteria = historyCurrentCriteria != null ? historyCurrentCriteria : buildHistoryCriteria();
+        byte[] csv = dataCacheService.exportDocumentHistory(criteria);
+        saveToFile(csv, "storico-documenti.csv", "csv", "File CSV");
+    }
+
+    @FXML
+    public void onHistoryDownloadPdf() {
+        Long agentId = parseLong(historyAgentIdField != null ? historyAgentIdField.getText() : null).orElse(null);
+        LocalDate from = historyFromDatePicker != null ? historyFromDatePicker.getValue() : null;
+        LocalDate to = historyToDatePicker != null ? historyToDatePicker.getValue() : null;
+        byte[] pdf = dataCacheService.downloadClosedInvoiceReport(from, to, agentId);
+        saveToFile(pdf, "report-fatture-chiuse.pdf", "pdf", "Documento PDF");
+    }
+
     private void refreshInvoices() {
         List<InvoiceDTO> dtos = dataCacheService.getInvoices();
         invoiceItems.setAll(dtos.stream().map(InvoiceModel::fromDto).toList());
@@ -382,6 +522,27 @@ public class MainViewController {
         List<ContractDTO> dtos = dataCacheService.getContracts();
         contractItems.setAll(dtos.stream().map(ContractModel::fromDto).toList());
         updateContractChart();
+    }
+
+    private void refreshHistorySearch(boolean resetPage) {
+        if (historySearchTable == null) {
+            return;
+        }
+        if (resetPage) {
+            historyCurrentPage = 0;
+        }
+        DocumentHistorySearchCriteria criteria = buildHistoryCriteria();
+        historyCurrentCriteria = criteria;
+        int size = historyPageSizeCombo != null && historyPageSizeCombo.getValue() != null ? historyPageSizeCombo.getValue() : 25;
+        DocumentHistoryPageDTO page = dataCacheService.searchDocumentHistory(criteria, historyCurrentPage, size);
+        if (page == null || page.getItems() == null) {
+            historySearchItems.clear();
+            updateHistoryPagination(null);
+            return;
+        }
+        historyCurrentPage = page.getPage();
+        historySearchItems.setAll(page.getItems().stream().map(DocumentHistoryModel::fromDto).toList());
+        updateHistoryPagination(page);
     }
 
     private void refreshStatistics() {
@@ -591,6 +752,55 @@ public class MainViewController {
         dataCacheService.getCaretaker().unsubscribe(historyObserver);
     }
 
+    private DocumentHistorySearchCriteria buildHistoryCriteria() {
+        DocumentHistorySearchCriteria criteria = new DocumentHistorySearchCriteria();
+        if (historyTypeCombo != null) {
+            criteria.setDocumentType(historyTypeCombo.getValue());
+        }
+        if (historyDocumentIdField != null) {
+            criteria.setDocumentId(parseLong(historyDocumentIdField.getText()).orElse(null));
+        }
+        if (historyActionCombo != null && historyActionCombo.getValue() != null) {
+            criteria.setActions(List.of(historyActionCombo.getValue()));
+        } else {
+            criteria.setActions(List.of());
+        }
+        criteria.setFrom(startOfDay(historyFromDatePicker != null ? historyFromDatePicker.getValue() : null));
+        criteria.setTo(endOfDay(historyToDatePicker != null ? historyToDatePicker.getValue() : null));
+        if (historySearchField != null) {
+            String text = historySearchField.getText();
+            criteria.setSearchText(text != null && !text.isBlank() ? text.trim() : null);
+        }
+        return criteria;
+    }
+
+    private void updateHistoryPagination(DocumentHistoryPageDTO page) {
+        if (historyPageInfoLabel == null || historyTotalLabel == null) {
+            return;
+        }
+        if (page == null) {
+            historyTotalPages = 0;
+            historyPageInfoLabel.setText("Pagina 0 di 0");
+            historyTotalLabel.setText("0 risultati");
+            if (historyPrevButton != null) {
+                historyPrevButton.setDisable(true);
+            }
+            if (historyNextButton != null) {
+                historyNextButton.setDisable(true);
+            }
+            return;
+        }
+        historyTotalPages = Math.max(page.getTotalPages(), 1);
+        historyPageInfoLabel.setText(String.format("Pagina %d di %d", page.getPage() + 1, page.getTotalPages()));
+        historyTotalLabel.setText(page.getTotalElements() + " risultati");
+        if (historyPrevButton != null) {
+            historyPrevButton.setDisable(!page.hasPrevious());
+        }
+        if (historyNextButton != null) {
+            historyNextButton.setDisable(!page.hasNext());
+        }
+    }
+
     private Optional<BigDecimal> parseBigDecimal(String value) {
         try {
             if (value == null || value.isBlank()) {
@@ -610,6 +820,34 @@ public class MainViewController {
             return Optional.of(Long.parseLong(value));
         } catch (NumberFormatException ex) {
             return Optional.empty();
+        }
+    }
+
+    private Instant startOfDay(LocalDate date) {
+        return date != null ? date.atStartOfDay(ZoneId.systemDefault()).toInstant() : null;
+    }
+
+    private Instant endOfDay(LocalDate date) {
+        return date != null ? date.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant() : null;
+    }
+
+    private void saveToFile(byte[] data, String defaultFileName, String extension, String description) {
+        if (data == null || data.length == 0) {
+            notificationService.publish(new NotificationMessage("warn", "Nessun dato da esportare", Instant.now()));
+            return;
+        }
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Salva " + description);
+        chooser.setInitialFileName(defaultFileName);
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(description, "*." + extension));
+        File target = chooser.showSaveDialog(mainTabPane != null && mainTabPane.getScene() != null ? mainTabPane.getScene().getWindow() : null);
+        if (target != null) {
+            try {
+                Files.write(Path.of(target.toURI()), data);
+                notificationService.publish(new NotificationMessage("export", "File salvato: " + target.getName(), Instant.now()));
+            } catch (IOException ex) {
+                notificationService.publish(new NotificationMessage("error", "Errore nel salvataggio del file", Instant.now()));
+            }
         }
     }
 

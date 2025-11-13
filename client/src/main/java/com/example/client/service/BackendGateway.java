@@ -11,22 +11,29 @@ import com.example.client.model.NotificationSubscriptionInfo;
 import com.example.common.dto.AgentStatisticsDTO;
 import com.example.common.dto.ContractDTO;
 import com.example.common.dto.DocumentHistoryDTO;
+import com.example.common.dto.DocumentHistoryPageDTO;
 import com.example.common.dto.InvoiceDTO;
 import com.example.common.dto.InvoicePaymentRequest;
 import com.example.common.dto.TeamStatisticsDTO;
+import com.example.common.enums.DocumentAction;
+import com.example.common.enums.DocumentType;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Gateway REST minimale verso il backend Spring Boot.
@@ -156,6 +163,37 @@ public class BackendGateway {
         });
     }
 
+    public DocumentHistoryPageDTO searchDocumentHistory(DocumentType documentType,
+                                                        Long documentId,
+                                                        List<DocumentAction> actions,
+                                                        Instant from,
+                                                        Instant to,
+                                                        String search,
+                                                        int page,
+                                                        int size) {
+        String path = buildHistoryPath("/api/history", documentType, documentId, actions, from, to, search, page, size);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri(path))
+                .GET()
+                .build();
+        return send(request, new TypeReference<>() {
+        });
+    }
+
+    public byte[] exportDocumentHistory(DocumentType documentType,
+                                        Long documentId,
+                                        List<DocumentAction> actions,
+                                        Instant from,
+                                        Instant to,
+                                        String search) {
+        String path = buildHistoryPath("/api/history/export", documentType, documentId, actions, from, to, search, 0, 0);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri(path))
+                .GET()
+                .build();
+        return sendBytes(request);
+    }
+
     public AgentStatisticsDTO agentStatistics(Integer year) {
         String path = year != null ? "/api/stats/agent?year=" + year : "/api/stats/agent";
         HttpRequest request = HttpRequest.newBuilder()
@@ -197,6 +235,28 @@ public class BackendGateway {
                 .build();
         return send(request, new TypeReference<>() {
         });
+    }
+
+    public byte[] downloadClosedInvoicesReport(LocalDate from, LocalDate to, Long agentId) {
+        StringBuilder path = new StringBuilder("/api/reports/closed-invoices");
+        List<String> params = new ArrayList<>();
+        if (from != null) {
+            params.add("from=" + URLEncoder.encode(from.toString(), StandardCharsets.UTF_8));
+        }
+        if (to != null) {
+            params.add("to=" + URLEncoder.encode(to.toString(), StandardCharsets.UTF_8));
+        }
+        if (agentId != null) {
+            params.add("agentId=" + agentId);
+        }
+        if (!params.isEmpty()) {
+            path.append('?').append(String.join("&", params));
+        }
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri(path.toString()))
+                .GET()
+                .build();
+        return sendBytes(request);
     }
 
     public NotificationItem publishNotification(NotificationCreate create) {
@@ -304,5 +364,63 @@ public class BackendGateway {
         } catch (IOException e) {
             throw new IllegalStateException("Errore di comunicazione con il backend", e);
         }
+    }
+
+    private byte[] sendBytes(HttpRequest request) {
+        try {
+            HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            int statusCode = response.statusCode();
+            if (statusCode >= 200 && statusCode < 300) {
+                byte[] body = response.body();
+                return body != null ? body : new byte[0];
+            }
+            throw new IllegalStateException("Errore chiamata API: " + statusCode);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Chiamata interrotta", e);
+        } catch (IOException e) {
+            throw new IllegalStateException("Errore di comunicazione con il backend", e);
+        }
+    }
+
+    private String buildHistoryPath(String basePath,
+                                    DocumentType documentType,
+                                    Long documentId,
+                                    List<DocumentAction> actions,
+                                    Instant from,
+                                    Instant to,
+                                    String search,
+                                    int page,
+                                    int size) {
+        List<String> params = new ArrayList<>();
+        params.add("page=" + Math.max(page, 0));
+        params.add("size=" + Math.max(size, 0));
+        if (documentType != null) {
+            params.add("documentType=" + documentType.name());
+        }
+        if (documentId != null) {
+            params.add("documentId=" + documentId);
+        }
+        if (actions != null && !actions.isEmpty()) {
+            String joined = actions.stream()
+                    .filter(Objects::nonNull)
+                    .map(DocumentAction::name)
+                    .sorted()
+                    .reduce((a, b) -> a + "," + b)
+                    .orElse(null);
+            if (joined != null && !joined.isEmpty()) {
+                params.add("actions=" + joined);
+            }
+        }
+        if (from != null) {
+            params.add("from=" + URLEncoder.encode(from.toString(), StandardCharsets.UTF_8));
+        }
+        if (to != null) {
+            params.add("to=" + URLEncoder.encode(to.toString(), StandardCharsets.UTF_8));
+        }
+        if (search != null && !search.isBlank()) {
+            params.add("q=" + URLEncoder.encode(search, StandardCharsets.UTF_8));
+        }
+        return params.isEmpty() ? basePath : basePath + "?" + String.join("&", params);
     }
 }

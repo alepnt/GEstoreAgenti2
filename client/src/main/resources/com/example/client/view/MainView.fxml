@@ -152,6 +152,68 @@
                     </right>
                 </BorderPane>
             </Tab>
+            <Tab text="Storico" closable="false">
+                <BorderPane padding="10">
+                    <top>
+                        <VBox spacing="8">
+                            <GridPane hgap="8" vgap="8">
+                                <columnConstraints>
+                                    <ColumnConstraints percentWidth="16" />
+                                    <ColumnConstraints percentWidth="34" />
+                                    <ColumnConstraints percentWidth="16" />
+                                    <ColumnConstraints percentWidth="34" />
+                                </columnConstraints>
+                                <Label text="Tipo documento" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                                <ComboBox fx:id="historyTypeCombo" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                <Label text="ID documento" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+                                <TextField fx:id="historyDocumentIdField" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+
+                                <Label text="Azione" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                                <ComboBox fx:id="historyActionCombo" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                <Label text="Ricerca testo" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                                <TextField fx:id="historySearchField" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+
+                                <Label text="Dal" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                                <DatePicker fx:id="historyFromDatePicker" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                <Label text="Al" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+                                <DatePicker fx:id="historyToDatePicker" GridPane.columnIndex="3" GridPane.rowIndex="2" />
+
+                                <Label text="Elementi per pagina" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                                <ComboBox fx:id="historyPageSizeCombo" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                                <Label text="Agente (report)" GridPane.columnIndex="2" GridPane.rowIndex="3" />
+                                <TextField fx:id="historyAgentIdField" GridPane.columnIndex="3" GridPane.rowIndex="3" />
+                            </GridPane>
+                            <HBox spacing="8">
+                                <Button text="Applica filtri" onAction="#onApplyHistoryFilters" />
+                                <Button text="Reset" onAction="#onResetHistoryFilters" />
+                            </HBox>
+                        </VBox>
+                    </top>
+                    <center>
+                        <VBox spacing="8">
+                            <TableView fx:id="historySearchTable" prefHeight="360">
+                                <columns>
+                                    <TableColumn fx:id="historySearchTypeColumn" text="Tipo" prefWidth="120" />
+                                    <TableColumn fx:id="historySearchDocumentIdColumn" text="Documento" prefWidth="120" />
+                                    <TableColumn fx:id="historySearchActionColumn" text="Azione" prefWidth="140" />
+                                    <TableColumn fx:id="historySearchDescriptionColumn" text="Descrizione" prefWidth="320" />
+                                    <TableColumn fx:id="historySearchTimestampColumn" text="Data" prefWidth="180" />
+                                </columns>
+                            </TableView>
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <Button fx:id="historyPrevButton" text="Precedente" onAction="#onHistoryPrevPage" />
+                                <Button fx:id="historyNextButton" text="Successivo" onAction="#onHistoryNextPage" />
+                                <Label fx:id="historyPageInfoLabel" text="Pagina 0 di 0" />
+                                <Label fx:id="historyTotalLabel" text="0 risultati" />
+                            </HBox>
+                            <HBox spacing="10">
+                                <Button text="Esporta CSV" onAction="#onHistoryExportCsv" />
+                                <Button text="Report PDF fatture chiuse" onAction="#onHistoryDownloadPdf" />
+                            </HBox>
+                        </VBox>
+                    </center>
+                </BorderPane>
+            </Tab>
             <Tab text="Statistiche" closable="false">
                 <BorderPane padding="10">
                     <top>

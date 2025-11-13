@@ -39,8 +39,8 @@ public class CommissionService {
         }
 
         Long agentId = contract.get().getAgentId();
-        BigDecimal commissionValue = invoiceAmount.multiply(COMMISSION_RATE);
-        BigDecimal paidCommissionValue = amountPaid.multiply(COMMISSION_RATE);
+        BigDecimal commissionValue = computeCommission(invoiceAmount);
+        BigDecimal paidCommissionValue = computeCommission(amountPaid);
 
         Commission base = commissionRepository
                 .findByAgentIdAndContractId(agentId, contractId)
@@ -55,5 +55,12 @@ public class CommissionService {
 
         Commission updated = base.update(totalCommission, paidCommission, pendingCommission, Instant.now(clock));
         return Optional.of(commissionRepository.save(updated));
+    }
+
+    public BigDecimal computeCommission(BigDecimal amount) {
+        if (amount == null) {
+            return BigDecimal.ZERO;
+        }
+        return amount.multiply(COMMISSION_RATE);
     }
 }
