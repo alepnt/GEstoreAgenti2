@@ -4,7 +4,7 @@ Questo repository contiene un progetto multi-modulo per l'applicazione Gestore A
 
 ## Prerequisiti
 
-- JDK 17+
+- JDK 21+
 - Maven 3.9+
 - Docker (necessario per i test di integrazione basati su Testcontainers)
 - Un'istanza Microsoft SQL Server raggiungibile dalla JVM dell'applicazione
