@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.example.client.controller.MainViewController">
+    <top>
+        <ToolBar>
+            <Label text="Gestore Agenti" />
+            <Pane HBox.hgrow="ALWAYS" />
+            <Button text="Aggiorna" onAction="#refreshData" />
+        </ToolBar>
+    </top>
+    <center>
+        <SplitPane>
+            <items>
+                <TableView fx:id="invoiceTable">
+                    <columns>
+                        <TableColumn fx:id="invoiceIdColumn" text="ID" prefWidth="100" />
+                        <TableColumn fx:id="invoiceAmountColumn" text="Importo" prefWidth="120" />
+                        <TableColumn fx:id="invoiceStatusColumn" text="Stato" prefWidth="120" />
+                    </columns>
+                </TableView>
+                <TableView fx:id="contractTable">
+                    <columns>
+                        <TableColumn fx:id="contractIdColumn" text="ID" prefWidth="100" />
+                        <TableColumn fx:id="contractAgentColumn" text="Agente" prefWidth="150" />
+                        <TableColumn fx:id="contractDescriptionColumn" text="Descrizione" prefWidth="200" />
+                    </columns>
+                </TableView>
+            </items>
+        </SplitPane>
+    </center>
+    <bottom>
+        <Label fx:id="notificationLabel" text="Pronto" padding="10" />
+    </bottom>
+</BorderPane>
