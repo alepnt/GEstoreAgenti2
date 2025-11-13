@@ -1,6 +1,7 @@
 package com.example.client.model;
 
 import com.example.common.dto.InvoiceDTO;
+import com.example.common.dto.InvoiceLineDTO;
 import com.example.common.enums.InvoiceStatus;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -9,6 +10,8 @@ import javafx.beans.property.StringProperty;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Modello JavaFX che incapsula InvoiceDTO per il binding con la vista.
@@ -18,6 +21,7 @@ public class InvoiceModel {
     private final ObjectProperty<Long> id = new SimpleObjectProperty<>();
     private final StringProperty number = new SimpleStringProperty();
     private final ObjectProperty<Long> contractId = new SimpleObjectProperty<>();
+    private final ObjectProperty<Long> customerId = new SimpleObjectProperty<>();
     private final StringProperty customerName = new SimpleStringProperty();
     private final ObjectProperty<BigDecimal> amount = new SimpleObjectProperty<>();
     private final ObjectProperty<LocalDate> issueDate = new SimpleObjectProperty<>();
@@ -25,18 +29,21 @@ public class InvoiceModel {
     private final StringProperty status = new SimpleStringProperty();
     private final ObjectProperty<LocalDate> paymentDate = new SimpleObjectProperty<>();
     private final StringProperty notes = new SimpleStringProperty();
+    private List<InvoiceLineDTO> lines = new ArrayList<>();
 
     public static InvoiceModel fromDto(InvoiceDTO dto) {
         InvoiceModel model = new InvoiceModel();
         model.setId(dto.getId());
         model.setNumber(dto.getNumber());
         model.setContractId(dto.getContractId());
+        model.setCustomerId(dto.getCustomerId());
         model.setCustomerName(dto.getCustomerName());
         model.setAmount(dto.getAmount());
         model.setIssueDate(dto.getIssueDate());
         model.setDueDate(dto.getDueDate());
         model.setPaymentDate(dto.getPaymentDate());
         model.setNotes(dto.getNotes());
+        model.setLines(dto.getLines());
         if (dto.getStatus() != null) {
             model.setStatus(dto.getStatus().name());
         }
@@ -49,13 +56,15 @@ public class InvoiceModel {
                 getId(),
                 getNumber(),
                 getContractId(),
+                getCustomerId(),
                 getCustomerName(),
                 getAmount(),
                 getIssueDate(),
                 getDueDate(),
                 invoiceStatus,
                 getPaymentDate(),
-                getNotes()
+                getNotes(),
+                getLines()
         );
     }
 
@@ -93,6 +102,18 @@ public class InvoiceModel {
 
     public ObjectProperty<Long> contractIdProperty() {
         return contractId;
+    }
+
+    public Long getCustomerId() {
+        return customerId.get();
+    }
+
+    public void setCustomerId(Long customerId) {
+        this.customerId.set(customerId);
+    }
+
+    public ObjectProperty<Long> customerIdProperty() {
+        return customerId;
     }
 
     public String getCustomerName() {
@@ -177,5 +198,13 @@ public class InvoiceModel {
 
     public StringProperty notesProperty() {
         return notes;
+    }
+
+    public List<InvoiceLineDTO> getLines() {
+        return new ArrayList<>(lines);
+    }
+
+    public void setLines(List<InvoiceLineDTO> lines) {
+        this.lines = lines != null ? new ArrayList<>(lines) : new ArrayList<>();
     }
 }

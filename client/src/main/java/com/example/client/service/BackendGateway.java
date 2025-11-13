@@ -9,7 +9,9 @@ import com.example.client.model.NotificationItem;
 import com.example.client.model.NotificationSubscription;
 import com.example.client.model.NotificationSubscriptionInfo;
 import com.example.common.dto.AgentStatisticsDTO;
+import com.example.common.dto.ArticleDTO;
 import com.example.common.dto.ContractDTO;
+import com.example.common.dto.CustomerDTO;
 import com.example.common.dto.DocumentHistoryDTO;
 import com.example.common.dto.DocumentHistoryPageDTO;
 import com.example.common.dto.InvoiceDTO;
@@ -104,6 +106,82 @@ public class BackendGateway {
                 .POST(HttpRequest.BodyPublishers.ofString(write(paymentRequest), StandardCharsets.UTF_8))
                 .build();
         return send(request, new TypeReference<>() {
+        });
+    }
+
+    public List<CustomerDTO> listCustomers() {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri("/api/customers"))
+                .GET()
+                .build();
+        return send(request, new TypeReference<>() {
+        });
+    }
+
+    public CustomerDTO createCustomer(CustomerDTO customer) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri("/api/customers"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(write(customer), StandardCharsets.UTF_8))
+                .build();
+        return send(request, new TypeReference<>() {
+        });
+    }
+
+    public CustomerDTO updateCustomer(Long id, CustomerDTO customer) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri("/api/customers/" + id))
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(write(customer), StandardCharsets.UTF_8))
+                .build();
+        return send(request, new TypeReference<>() {
+        });
+    }
+
+    public void deleteCustomer(Long id) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri("/api/customers/" + id))
+                .DELETE()
+                .build();
+        send(request, new TypeReference<Void>() {
+        });
+    }
+
+    public List<ArticleDTO> listArticles() {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri("/api/articles"))
+                .GET()
+                .build();
+        return send(request, new TypeReference<>() {
+        });
+    }
+
+    public ArticleDTO createArticle(ArticleDTO article) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri("/api/articles"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(write(article), StandardCharsets.UTF_8))
+                .build();
+        return send(request, new TypeReference<>() {
+        });
+    }
+
+    public ArticleDTO updateArticle(Long id, ArticleDTO article) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri("/api/articles/" + id))
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(write(article), StandardCharsets.UTF_8))
+                .build();
+        return send(request, new TypeReference<>() {
+        });
+    }
+
+    public void deleteArticle(Long id) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri("/api/articles/" + id))
+                .DELETE()
+                .build();
+        send(request, new TypeReference<Void>() {
         });
     }
 

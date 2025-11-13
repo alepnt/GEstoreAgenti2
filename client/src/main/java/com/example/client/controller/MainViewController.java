@@ -1,19 +1,25 @@
 package com.example.client.controller;
 
 import com.example.client.command.CommandMemento;
+import com.example.client.model.ArticleModel;
 import com.example.client.model.ContractModel;
+import com.example.client.model.CustomerModel;
 import com.example.client.model.DataChangeEvent;
 import com.example.client.model.DataChangeType;
 import com.example.client.model.DocumentHistoryModel;
 import com.example.client.model.DocumentHistorySearchCriteria;
 import com.example.client.model.InvoiceModel;
+import com.example.client.model.InvoiceLineModel;
 import com.example.client.service.DataCacheService;
 import com.example.client.service.NotificationService;
 import com.example.common.dto.ContractDTO;
 import com.example.common.dto.DocumentHistoryDTO;
 import com.example.common.dto.DocumentHistoryPageDTO;
 import com.example.common.dto.InvoiceDTO;
+import com.example.common.dto.InvoiceLineDTO;
 import com.example.common.dto.InvoicePaymentRequest;
+import com.example.common.dto.ArticleDTO;
+import com.example.common.dto.CustomerDTO;
 import com.example.common.dto.AgentCommissionDTO;
 import com.example.common.dto.AgentStatisticsDTO;
 import com.example.common.dto.MonthlyCommissionDTO;
@@ -27,6 +33,7 @@ import com.example.common.enums.InvoiceStatus;
 import com.example.common.observer.Observer;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.chart.BarChart;
@@ -75,6 +82,9 @@ public class MainViewController {
     private final NotificationService notificationService = new NotificationService();
     private final ObservableList<InvoiceModel> invoiceItems = FXCollections.observableArrayList();
     private final ObservableList<ContractModel> contractItems = FXCollections.observableArrayList();
+    private final ObservableList<CustomerModel> customerItems = FXCollections.observableArrayList();
+    private final ObservableList<ArticleModel> articleItems = FXCollections.observableArrayList();
+    private final ObservableList<InvoiceLineModel> invoiceLineItems = FXCollections.observableArrayList();
     private final ObservableList<DocumentHistoryModel> historyItems = FXCollections.observableArrayList();
     private final ObservableList<DocumentHistoryModel> historySearchItems = FXCollections.observableArrayList();
     private final Observer<NotificationMessage> notificationObserver = this::onNotification;
@@ -95,7 +105,7 @@ public class MainViewController {
     @FXML
     private TextField invoiceNumberField;
     @FXML
-    private TextField invoiceCustomerField;
+    private ComboBox<CustomerModel> invoiceCustomerCombo;
     @FXML
     private TextField invoiceContractField;
     @FXML
@@ -120,6 +130,35 @@ public class MainViewController {
     private Button invoiceDeleteButton;
     @FXML
     private Button invoicePayButton;
+
+    @FXML
+    private TableView<InvoiceLineModel> invoiceLinesTable;
+    @FXML
+    private TableColumn<InvoiceLineModel, String> invoiceLineArticleColumn;
+    @FXML
+    private TableColumn<InvoiceLineModel, String> invoiceLineDescriptionColumn;
+    @FXML
+    private TableColumn<InvoiceLineModel, BigDecimal> invoiceLineQuantityColumn;
+    @FXML
+    private TableColumn<InvoiceLineModel, BigDecimal> invoiceLinePriceColumn;
+    @FXML
+    private TableColumn<InvoiceLineModel, BigDecimal> invoiceLineVatColumn;
+    @FXML
+    private TableColumn<InvoiceLineModel, BigDecimal> invoiceLineTotalColumn;
+    @FXML
+    private ComboBox<ArticleModel> invoiceLineArticleCombo;
+    @FXML
+    private TextField invoiceLineDescriptionField;
+    @FXML
+    private TextField invoiceLineQuantityField;
+    @FXML
+    private TextField invoiceLinePriceField;
+    @FXML
+    private TextField invoiceLineVatField;
+    @FXML
+    private Button invoiceLineAddButton;
+    @FXML
+    private Button invoiceLineRemoveButton;
 
     @FXML
     private TableView<InvoiceModel> invoiceTable;
@@ -221,6 +260,64 @@ public class MainViewController {
     private PieChart contractStatusChart;
 
     @FXML
+    private TextField customerNameField;
+    @FXML
+    private TextField customerEmailField;
+    @FXML
+    private TextField customerPhoneField;
+    @FXML
+    private TextField customerVatField;
+    @FXML
+    private TextField customerTaxCodeField;
+    @FXML
+    private TextField customerAddressField;
+    @FXML
+    private Button customerSaveButton;
+    @FXML
+    private Button customerUpdateButton;
+    @FXML
+    private Button customerDeleteButton;
+    @FXML
+    private TableView<CustomerModel> customerTable;
+    @FXML
+    private TableColumn<CustomerModel, String> customerNameColumn;
+    @FXML
+    private TableColumn<CustomerModel, String> customerEmailColumn;
+    @FXML
+    private TableColumn<CustomerModel, String> customerPhoneColumn;
+    @FXML
+    private TableColumn<CustomerModel, String> customerVatColumn;
+
+    @FXML
+    private TextField articleCodeField;
+    @FXML
+    private TextField articleNameField;
+    @FXML
+    private TextArea articleDescriptionArea;
+    @FXML
+    private TextField articlePriceField;
+    @FXML
+    private TextField articleVatField;
+    @FXML
+    private TextField articleUomField;
+    @FXML
+    private Button articleSaveButton;
+    @FXML
+    private Button articleUpdateButton;
+    @FXML
+    private Button articleDeleteButton;
+    @FXML
+    private TableView<ArticleModel> articleTable;
+    @FXML
+    private TableColumn<ArticleModel, String> articleCodeColumn;
+    @FXML
+    private TableColumn<ArticleModel, String> articleNameColumn;
+    @FXML
+    private TableColumn<ArticleModel, BigDecimal> articlePriceColumn;
+    @FXML
+    private TableColumn<ArticleModel, BigDecimal> articleVatColumn;
+
+    @FXML
     private Label notificationLabel;
 
     @FXML
@@ -242,18 +339,42 @@ public class MainViewController {
         invoicePaymentAmountField.setTextFormatter(new TextFormatter<>(new BigDecimalStringConverter(), null));
         invoiceAmountField.setTextFormatter(new TextFormatter<>(new BigDecimalStringConverter(), null));
         contractValueField.setTextFormatter(new TextFormatter<>(new BigDecimalStringConverter(), null));
+        invoiceLineQuantityField.setTextFormatter(new TextFormatter<>(new BigDecimalStringConverter(), null));
+        invoiceLinePriceField.setTextFormatter(new TextFormatter<>(new BigDecimalStringConverter(), null));
+        invoiceLineVatField.setTextFormatter(new TextFormatter<>(new BigDecimalStringConverter(), null));
+        articlePriceField.setTextFormatter(new TextFormatter<>(new BigDecimalStringConverter(), null));
+        articleVatField.setTextFormatter(new TextFormatter<>(new BigDecimalStringConverter(), null));
 
+        invoiceCustomerCombo.setItems(customerItems);
+        invoiceLineArticleCombo.setItems(articleItems);
         invoiceNumberColumn.setCellValueFactory(new PropertyValueFactory<>("number"));
         invoiceCustomerColumn.setCellValueFactory(new PropertyValueFactory<>("customerName"));
         invoiceAmountColumn.setCellValueFactory(param -> param.getValue().amountProperty());
         invoiceStatusColumn.setCellValueFactory(new PropertyValueFactory<>("status"));
         invoiceDueDateColumn.setCellValueFactory(param -> param.getValue().dueDateProperty());
 
+        invoiceLineArticleColumn.setCellValueFactory(cell -> cell.getValue().articleNameProperty());
+        invoiceLineDescriptionColumn.setCellValueFactory(cell -> cell.getValue().descriptionProperty());
+        invoiceLineQuantityColumn.setCellValueFactory(cell -> cell.getValue().quantityProperty());
+        invoiceLinePriceColumn.setCellValueFactory(cell -> cell.getValue().unitPriceProperty());
+        invoiceLineVatColumn.setCellValueFactory(cell -> cell.getValue().vatRateProperty());
+        invoiceLineTotalColumn.setCellValueFactory(cell -> cell.getValue().totalProperty());
+
         contractCustomerColumn.setCellValueFactory(new PropertyValueFactory<>("customerName"));
         contractDescriptionColumn.setCellValueFactory(new PropertyValueFactory<>("description"));
         contractValueColumn.setCellValueFactory(param -> param.getValue().totalValueProperty());
         contractStatusColumn.setCellValueFactory(new PropertyValueFactory<>("status"));
         contractStartColumn.setCellValueFactory(param -> param.getValue().startDateProperty());
+
+        customerNameColumn.setCellValueFactory(cell -> cell.getValue().nameProperty());
+        customerEmailColumn.setCellValueFactory(cell -> cell.getValue().emailProperty());
+        customerPhoneColumn.setCellValueFactory(cell -> cell.getValue().phoneProperty());
+        customerVatColumn.setCellValueFactory(cell -> cell.getValue().vatNumberProperty());
+
+        articleCodeColumn.setCellValueFactory(cell -> cell.getValue().codeProperty());
+        articleNameColumn.setCellValueFactory(cell -> cell.getValue().nameProperty());
+        articlePriceColumn.setCellValueFactory(cell -> cell.getValue().unitPriceProperty());
+        articleVatColumn.setCellValueFactory(cell -> cell.getValue().vatRateProperty());
 
         historyActionColumn.setCellValueFactory(new PropertyValueFactory<>("action"));
         historyDescriptionColumn.setCellValueFactory(new PropertyValueFactory<>("description"));
@@ -281,13 +402,25 @@ public class MainViewController {
         invoiceTable.setItems(invoiceItems);
         contractTable.setItems(contractItems);
         historyTable.setItems(historyItems);
+        invoiceLinesTable.setItems(invoiceLineItems);
+        customerTable.setItems(customerItems);
+        articleTable.setItems(articleItems);
 
         updateHistoryPagination(null);
 
         invoiceTable.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, selected) -> {
             if (selected != null) {
+                clearInvoiceLineForm();
                 populateInvoiceForm(selected);
                 loadHistory(DocumentType.INVOICE, selected.getId());
+            } else {
+                invoiceLineItems.clear();
+            }
+        });
+
+        invoiceLinesTable.getSelectionModel().selectedItemProperty().addListener((obs, oldLine, selected) -> {
+            if (selected != null) {
+                populateInvoiceLineForm(selected);
             }
         });
 
@@ -298,6 +431,18 @@ public class MainViewController {
             }
         });
 
+        customerTable.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, selected) -> {
+            if (selected != null) {
+                populateCustomerForm(selected);
+            }
+        });
+
+        articleTable.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, selected) -> {
+            if (selected != null) {
+                populateArticleForm(selected);
+            }
+        });
+
         if (statsYearCombo != null) {
             statsYearCombo.setOnAction(event -> {
                 if (!updatingStatsYear) {
@@ -305,6 +450,30 @@ public class MainViewController {
                 }
             });
         }
+
+        invoiceLineItems.addListener((ListChangeListener<InvoiceLineModel>) change -> {
+            while (change.next()) {
+                if (change.wasAdded()) {
+                    change.getAddedSubList().forEach(this::registerInvoiceLineListeners);
+                }
+            }
+            updateInvoiceAmountFromLines();
+        });
+
+        invoiceLineArticleCombo.getSelectionModel().selectedItemProperty().addListener((obs, oldArticle, article) -> {
+            if (article != null) {
+                if (article.getUnitPrice() != null) {
+                    invoiceLinePriceField.setText(article.getUnitPrice().toPlainString());
+                }
+                if (article.getVatRate() != null) {
+                    invoiceLineVatField.setText(article.getVatRate().toPlainString());
+                }
+                if ((invoiceLineDescriptionField.getText() == null || invoiceLineDescriptionField.getText().isBlank())
+                        && article.getDescription() != null) {
+                    invoiceLineDescriptionField.setText(article.getDescription());
+                }
+            }
+        });
 
         mainTabPane.getSelectionModel().selectedItemProperty().addListener((obs, oldTab, newTab) -> {
             if (newTab != null && Objects.equals(newTab.getText(), "Contratti")) {
@@ -333,6 +502,8 @@ public class MainViewController {
 
     @FXML
     public void refreshData() {
+        refreshCustomers();
+        refreshArticles();
         refreshInvoices();
         refreshContracts();
         refreshStatistics();
@@ -398,6 +569,147 @@ public class MainViewController {
         refreshInvoices();
         selectInvoice(selected.getId());
         notificationService.publish(new NotificationMessage("invoice", "Pagamento registrato", Instant.now()));
+    }
+
+    @FXML
+    public void onAddInvoiceLine() {
+        ArticleModel article = invoiceLineArticleCombo.getSelectionModel().getSelectedItem();
+        if (article == null || article.getId() == null) {
+            notificationService.publish(new NotificationMessage("warn", "Seleziona un articolo", Instant.now()));
+            return;
+        }
+        BigDecimal quantity = parseBigDecimal(invoiceLineQuantityField.getText()).orElse(BigDecimal.ONE);
+        if (quantity == null || quantity.signum() <= 0) {
+            notificationService.publish(new NotificationMessage("error", "Quantità non valida", Instant.now()));
+            return;
+        }
+        BigDecimal price = parseBigDecimal(invoiceLinePriceField.getText())
+                .orElse(article.getUnitPrice() != null ? article.getUnitPrice() : BigDecimal.ZERO);
+        if (price.signum() < 0) {
+            notificationService.publish(new NotificationMessage("error", "Prezzo non valido", Instant.now()));
+            return;
+        }
+        BigDecimal vat = parseBigDecimal(invoiceLineVatField.getText())
+                .orElse(article.getVatRate() != null ? article.getVatRate() : BigDecimal.ZERO);
+        InvoiceLineModel line = new InvoiceLineModel();
+        line.setArticleId(article.getId());
+        line.setArticleCode(article.getCode());
+        line.setArticleName(article.getName());
+        String description = invoiceLineDescriptionField.getText();
+        if (description == null || description.isBlank()) {
+            description = article.getDescription() != null && !article.getDescription().isBlank()
+                    ? article.getDescription()
+                    : article.getName();
+        }
+        line.setDescription(description);
+        line.setQuantity(quantity);
+        line.setUnitPrice(price);
+        line.setVatRate(vat);
+        line.recalculateTotal();
+        invoiceLineItems.add(line);
+        registerInvoiceLineListeners(line);
+        clearInvoiceLineForm();
+    }
+
+    @FXML
+    public void onRemoveInvoiceLine() {
+        InvoiceLineModel selected = invoiceLinesTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            notificationService.publish(new NotificationMessage("warn", "Seleziona una riga", Instant.now()));
+            return;
+        }
+        invoiceLineItems.remove(selected);
+        updateInvoiceAmountFromLines();
+        clearInvoiceLineForm();
+        notificationService.publish(new NotificationMessage("invoice", "Riga fattura rimossa", Instant.now()));
+    }
+
+    @FXML
+    public void onCreateCustomer() {
+        try {
+            CustomerDTO dto = buildCustomerFromForm(null);
+            CustomerDTO created = dataCacheService.createCustomer(dto);
+            refreshCustomers();
+            selectCustomer(created.getId());
+            notificationService.publish(new NotificationMessage("customer", "Cliente creato", Instant.now()));
+        } catch (IllegalArgumentException ex) {
+            notificationService.publish(new NotificationMessage("error", ex.getMessage(), Instant.now()));
+        }
+    }
+
+    @FXML
+    public void onUpdateCustomer() {
+        CustomerModel selected = customerTable.getSelectionModel().getSelectedItem();
+        if (selected == null || selected.getId() == null) {
+            notificationService.publish(new NotificationMessage("warn", "Seleziona un cliente", Instant.now()));
+            return;
+        }
+        try {
+            CustomerDTO dto = buildCustomerFromForm(selected.getId());
+            dataCacheService.updateCustomer(selected.getId(), dto);
+            refreshCustomers();
+            selectCustomer(selected.getId());
+            notificationService.publish(new NotificationMessage("customer", "Cliente aggiornato", Instant.now()));
+        } catch (IllegalArgumentException ex) {
+            notificationService.publish(new NotificationMessage("error", ex.getMessage(), Instant.now()));
+        }
+    }
+
+    @FXML
+    public void onDeleteCustomer() {
+        CustomerModel selected = customerTable.getSelectionModel().getSelectedItem();
+        if (selected == null || selected.getId() == null) {
+            notificationService.publish(new NotificationMessage("warn", "Seleziona un cliente", Instant.now()));
+            return;
+        }
+        dataCacheService.deleteCustomer(selected.getId());
+        refreshCustomers();
+        clearCustomerForm();
+        notificationService.publish(new NotificationMessage("customer", "Cliente eliminato", Instant.now()));
+    }
+
+    @FXML
+    public void onCreateArticle() {
+        try {
+            ArticleDTO dto = buildArticleFromForm(null);
+            ArticleDTO created = dataCacheService.createArticle(dto);
+            refreshArticles();
+            selectArticle(created.getId());
+            notificationService.publish(new NotificationMessage("article", "Articolo creato", Instant.now()));
+        } catch (IllegalArgumentException ex) {
+            notificationService.publish(new NotificationMessage("error", ex.getMessage(), Instant.now()));
+        }
+    }
+
+    @FXML
+    public void onUpdateArticle() {
+        ArticleModel selected = articleTable.getSelectionModel().getSelectedItem();
+        if (selected == null || selected.getId() == null) {
+            notificationService.publish(new NotificationMessage("warn", "Seleziona un articolo", Instant.now()));
+            return;
+        }
+        try {
+            ArticleDTO dto = buildArticleFromForm(selected.getId());
+            dataCacheService.updateArticle(selected.getId(), dto);
+            refreshArticles();
+            selectArticle(selected.getId());
+            notificationService.publish(new NotificationMessage("article", "Articolo aggiornato", Instant.now()));
+        } catch (IllegalArgumentException ex) {
+            notificationService.publish(new NotificationMessage("error", ex.getMessage(), Instant.now()));
+        }
+    }
+
+    @FXML
+    public void onDeleteArticle() {
+        ArticleModel selected = articleTable.getSelectionModel().getSelectedItem();
+        if (selected == null || selected.getId() == null) {
+            notificationService.publish(new NotificationMessage("warn", "Seleziona un articolo", Instant.now()));
+            return;
+        }
+        dataCacheService.deleteArticle(selected.getId());
+        refreshArticles();
+        clearArticleForm();
+        notificationService.publish(new NotificationMessage("article", "Articolo eliminato", Instant.now()));
     }
 
     @FXML
@@ -512,6 +824,34 @@ public class MainViewController {
         saveToFile(pdf, "report-fatture-chiuse.pdf", "pdf", "Documento PDF");
     }
 
+    private void refreshCustomers() {
+        Long selectedCustomerId = Optional.ofNullable(invoiceCustomerCombo.getSelectionModel().getSelectedItem())
+                .map(CustomerModel::getId)
+                .orElse(null);
+        List<CustomerDTO> dtos = dataCacheService.getCustomers();
+        customerItems.setAll(dtos.stream().map(CustomerModel::fromDto).toList());
+        if (selectedCustomerId != null) {
+            customerItems.stream()
+                    .filter(item -> selectedCustomerId.equals(item.getId()))
+                    .findFirst()
+                    .ifPresent(invoiceCustomerCombo.getSelectionModel()::select);
+        }
+    }
+
+    private void refreshArticles() {
+        Long selectedArticleId = Optional.ofNullable(invoiceLineArticleCombo.getSelectionModel().getSelectedItem())
+                .map(ArticleModel::getId)
+                .orElse(null);
+        List<ArticleDTO> dtos = dataCacheService.getArticles();
+        articleItems.setAll(dtos.stream().map(ArticleModel::fromDto).toList());
+        if (selectedArticleId != null) {
+            articleItems.stream()
+                    .filter(item -> selectedArticleId.equals(item.getId()))
+                    .findFirst()
+                    .ifPresent(invoiceLineArticleCombo.getSelectionModel()::select);
+        }
+    }
+
     private void refreshInvoices() {
         List<InvoiceDTO> dtos = dataCacheService.getInvoices();
         invoiceItems.setAll(dtos.stream().map(InvoiceModel::fromDto).toList());
@@ -615,28 +955,41 @@ public class MainViewController {
     }
 
     private InvoiceDTO buildInvoiceFromForm(Long id) {
-        String customer = invoiceCustomerField.getText();
-        if (customer == null || customer.isBlank()) {
+        CustomerModel customer = invoiceCustomerCombo.getSelectionModel().getSelectedItem();
+        if (customer == null || customer.getId() == null) {
             throw new IllegalArgumentException("Il cliente è obbligatorio");
         }
-        BigDecimal amount = parseBigDecimal(invoiceAmountField.getText())
-                .orElseThrow(() -> new IllegalArgumentException("Importo non valido"));
         LocalDate issueDate = invoiceIssueDatePicker.getValue();
         if (issueDate == null) {
             throw new IllegalArgumentException("La data di emissione è obbligatoria");
         }
         Long contractId = parseLong(invoiceContractField.getText()).orElse(null);
         InvoiceStatus status = invoiceStatusCombo.getValue() != null ? invoiceStatusCombo.getValue() : InvoiceStatus.DRAFT;
+        List<InvoiceLineDTO> lines = invoiceLineItems.stream()
+                .map(InvoiceLineModel::toDto)
+                .toList();
+        BigDecimal amount;
+        if (!lines.isEmpty()) {
+            amount = invoiceLineItems.stream()
+                    .map(InvoiceLineModel::getTotal)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            invoiceAmountField.setText(amount.toPlainString());
+        } else {
+            amount = parseBigDecimal(invoiceAmountField.getText())
+                    .orElseThrow(() -> new IllegalArgumentException("Importo non valido"));
+        }
         return new InvoiceDTO(id,
                 invoiceNumberField.getText(),
                 contractId,
-                customer,
+                customer.getId(),
+                customer.getName(),
                 amount,
                 issueDate,
                 invoiceDueDatePicker.getValue(),
                 status,
                 invoicePaymentDatePicker.getValue(),
-                invoiceNotesArea.getText());
+                invoiceNotesArea.getText(),
+                lines);
     }
 
     private ContractDTO buildContractFromForm(Long id) {
@@ -664,7 +1017,14 @@ public class MainViewController {
 
     private void populateInvoiceForm(InvoiceModel model) {
         invoiceNumberField.setText(model.getNumber());
-        invoiceCustomerField.setText(model.getCustomerName());
+        if (model.getCustomerId() != null) {
+            customerItems.stream()
+                    .filter(item -> model.getCustomerId().equals(item.getId()))
+                    .findFirst()
+                    .ifPresent(invoiceCustomerCombo.getSelectionModel()::select);
+        } else {
+            invoiceCustomerCombo.getSelectionModel().clearSelection();
+        }
         invoiceContractField.setText(model.getContractId() != null ? model.getContractId().toString() : "");
         invoiceAmountField.setText(model.getAmount() != null ? model.getAmount().toPlainString() : "");
         invoiceIssueDatePicker.setValue(model.getIssueDate());
@@ -673,6 +1033,24 @@ public class MainViewController {
         invoicePaymentDatePicker.setValue(model.getPaymentDate());
         invoicePaymentAmountField.setText(model.getAmount() != null ? model.getAmount().toPlainString() : "");
         invoiceNotesArea.setText(model.getNotes());
+        List<InvoiceLineModel> lines = model.getLines().stream()
+                .map(InvoiceLineModel::fromDto)
+                .toList();
+        lines.forEach(line -> {
+            articleItems.stream()
+                    .filter(article -> line.getArticleId() != null && line.getArticleId().equals(article.getId()))
+                    .findFirst()
+                    .ifPresent(article -> {
+                        line.setArticleName(article.getName());
+                        if (line.getArticleCode() == null || line.getArticleCode().isBlank()) {
+                            line.setArticleCode(article.getCode());
+                        }
+                    });
+            registerInvoiceLineListeners(line);
+            line.recalculateTotal();
+        });
+        invoiceLineItems.setAll(lines);
+        updateInvoiceAmountFromLines();
     }
 
     private void populateContractForm(ContractModel model) {
@@ -683,6 +1061,44 @@ public class MainViewController {
         contractStatusCombo.setValue(model.getStatus() != null ? ContractStatus.valueOf(model.getStatus()) : null);
         contractStartPicker.setValue(model.getStartDate());
         contractEndPicker.setValue(model.getEndDate());
+    }
+
+    private void populateCustomerForm(CustomerModel model) {
+        customerNameField.setText(model.getName());
+        customerEmailField.setText(model.getEmail());
+        customerPhoneField.setText(model.getPhone());
+        customerVatField.setText(model.getVatNumber());
+        customerTaxCodeField.setText(model.getTaxCode());
+        customerAddressField.setText(model.getAddress());
+    }
+
+    private void clearCustomerForm() {
+        customerNameField.clear();
+        customerEmailField.clear();
+        customerPhoneField.clear();
+        customerVatField.clear();
+        customerTaxCodeField.clear();
+        customerAddressField.clear();
+        customerTable.getSelectionModel().clearSelection();
+    }
+
+    private void populateArticleForm(ArticleModel model) {
+        articleCodeField.setText(model.getCode());
+        articleNameField.setText(model.getName());
+        articleDescriptionArea.setText(model.getDescription());
+        articlePriceField.setText(model.getUnitPrice() != null ? model.getUnitPrice().toPlainString() : "");
+        articleVatField.setText(model.getVatRate() != null ? model.getVatRate().toPlainString() : "");
+        articleUomField.setText(model.getUnitOfMeasure());
+    }
+
+    private void clearArticleForm() {
+        articleCodeField.clear();
+        articleNameField.clear();
+        articleDescriptionArea.clear();
+        articlePriceField.clear();
+        articleVatField.clear();
+        articleUomField.clear();
+        articleTable.getSelectionModel().clearSelection();
     }
 
     private void loadHistory(DocumentType type, Long documentId) {
@@ -719,6 +1135,26 @@ public class MainViewController {
                 .ifPresent(item -> contractTable.getSelectionModel().select(item));
     }
 
+    private void selectCustomer(Long id) {
+        if (id == null) {
+            return;
+        }
+        customerTable.getItems().stream()
+                .filter(item -> id.equals(item.getId()))
+                .findFirst()
+                .ifPresent(item -> customerTable.getSelectionModel().select(item));
+    }
+
+    private void selectArticle(Long id) {
+        if (id == null) {
+            return;
+        }
+        articleTable.getItems().stream()
+                .filter(item -> id.equals(item.getId()))
+                .findFirst()
+                .ifPresent(item -> articleTable.getSelectionModel().select(item));
+    }
+
     private void onNotification(NotificationMessage notification) {
         if (notificationLabel != null) {
             notificationLabel.setText(notification.getPayload());
@@ -729,8 +1165,12 @@ public class MainViewController {
         if (event == null) {
             return;
         }
-        if (event.type() == DataChangeType.INVOICE) {
-            refreshStatistics();
+        switch (event.type()) {
+            case INVOICE -> refreshStatistics();
+            case CUSTOMER -> refreshCustomers();
+            case ARTICLE -> refreshArticles();
+            case CONTRACT -> {
+            }
         }
     }
 
@@ -821,6 +1261,88 @@ public class MainViewController {
         } catch (NumberFormatException ex) {
             return Optional.empty();
         }
+    }
+
+    private CustomerDTO buildCustomerFromForm(Long id) {
+        String name = customerNameField.getText();
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Il nome del cliente è obbligatorio");
+        }
+        return new CustomerDTO(id,
+                name.trim(),
+                normalize(customerVatField.getText()),
+                normalize(customerTaxCodeField.getText()),
+                normalize(customerEmailField.getText()),
+                normalize(customerPhoneField.getText()),
+                normalize(customerAddressField.getText()),
+                null,
+                null);
+    }
+
+    private ArticleDTO buildArticleFromForm(Long id) {
+        String name = articleNameField.getText();
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Il nome dell'articolo è obbligatorio");
+        }
+        BigDecimal price = parseBigDecimal(articlePriceField.getText()).orElse(BigDecimal.ZERO);
+        if (price.signum() < 0) {
+            throw new IllegalArgumentException("Prezzo non valido");
+        }
+        BigDecimal vat = parseBigDecimal(articleVatField.getText()).orElse(BigDecimal.ZERO);
+        return new ArticleDTO(id,
+                normalize(articleCodeField.getText()),
+                name.trim(),
+                normalize(articleDescriptionArea.getText()),
+                price,
+                vat,
+                normalize(articleUomField.getText()),
+                null,
+                null);
+    }
+
+    private void populateInvoiceLineForm(InvoiceLineModel line) {
+        if (line.getArticleId() != null) {
+            articleItems.stream()
+                    .filter(article -> line.getArticleId().equals(article.getId()))
+                    .findFirst()
+                    .ifPresent(invoiceLineArticleCombo.getSelectionModel()::select);
+        } else {
+            invoiceLineArticleCombo.getSelectionModel().clearSelection();
+        }
+        invoiceLineDescriptionField.setText(line.getDescription());
+        invoiceLineQuantityField.setText(line.getQuantity() != null ? line.getQuantity().toPlainString() : "");
+        invoiceLinePriceField.setText(line.getUnitPrice() != null ? line.getUnitPrice().toPlainString() : "");
+        invoiceLineVatField.setText(line.getVatRate() != null ? line.getVatRate().toPlainString() : "");
+    }
+
+    private void clearInvoiceLineForm() {
+        invoiceLineArticleCombo.getSelectionModel().clearSelection();
+        invoiceLineDescriptionField.clear();
+        invoiceLineQuantityField.clear();
+        invoiceLinePriceField.clear();
+        invoiceLineVatField.clear();
+        invoiceLinesTable.getSelectionModel().clearSelection();
+    }
+
+    private void registerInvoiceLineListeners(InvoiceLineModel line) {
+        line.totalProperty().addListener((obs, oldValue, newValue) -> updateInvoiceAmountFromLines());
+    }
+
+    private void updateInvoiceAmountFromLines() {
+        if (invoiceLineItems.isEmpty()) {
+            invoiceAmountField.clear();
+            invoicePaymentAmountField.clear();
+            return;
+        }
+        BigDecimal total = invoiceLineItems.stream()
+                .map(InvoiceLineModel::getTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        invoiceAmountField.setText(total.toPlainString());
+        invoicePaymentAmountField.setText(total.toPlainString());
+    }
+
+    private String normalize(String value) {
+        return value != null && !value.isBlank() ? value.trim() : null;
     }
 
     private Instant startOfDay(LocalDate date) {
