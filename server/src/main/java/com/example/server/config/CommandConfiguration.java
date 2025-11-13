@@ -20,4 +20,9 @@ public class CommandConfiguration {
     public CommandBus commandBus(CommandContext context) {
         return new CommandBus(context);
     }
+
+    @Bean
+    public java.time.Clock systemClock() {
+        return java.time.Clock.systemUTC();
+    }
 }
