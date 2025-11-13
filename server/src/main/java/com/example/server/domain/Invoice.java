@@ -23,6 +23,9 @@ public class Invoice {
     @Column("invoice_number")
     private String number;
 
+    @Column("customer_id")
+    private Long customerId;
+
     @Column("customer_name")
     private String customerName;
 
@@ -51,6 +54,7 @@ public class Invoice {
     public Invoice(Long id,
                    Long contractId,
                    String number,
+                   Long customerId,
                    String customerName,
                    BigDecimal amount,
                    LocalDate issueDate,
@@ -63,6 +67,7 @@ public class Invoice {
         this.id = id;
         this.contractId = contractId;
         this.number = number;
+        this.customerId = customerId;
         this.customerName = customerName;
         this.amount = amount;
         this.issueDate = issueDate;
@@ -76,23 +81,25 @@ public class Invoice {
 
     public static Invoice create(Long contractId,
                                  String number,
+                                 Long customerId,
                                  String customerName,
                                  BigDecimal amount,
                                  LocalDate issueDate,
                                  LocalDate dueDate,
                                  InvoiceStatus status,
                                  String notes) {
-        return new Invoice(null, contractId, number, customerName, amount, issueDate, dueDate, status, null, notes, null, null);
+        return new Invoice(null, contractId, number, customerId, customerName, amount, issueDate, dueDate, status, null, notes, null, null);
     }
 
     public Invoice withId(Long id) {
-        return new Invoice(id, contractId, number, customerName, amount, issueDate, dueDate, status, paymentDate, notes, createdAt, updatedAt);
+        return new Invoice(id, contractId, number, customerId, customerName, amount, issueDate, dueDate, status, paymentDate, notes, createdAt, updatedAt);
     }
 
     public Invoice updateFrom(Invoice source) {
         return new Invoice(id,
                 source.contractId,
                 source.number,
+                source.customerId,
                 source.customerName,
                 source.amount,
                 source.issueDate,
@@ -105,7 +112,7 @@ public class Invoice {
     }
 
     public Invoice registerPayment(LocalDate paymentDate, InvoiceStatus newStatus) {
-        return new Invoice(id, contractId, number, customerName, amount, issueDate, dueDate, newStatus, paymentDate, notes, createdAt, updatedAt);
+        return new Invoice(id, contractId, number, customerId, customerName, amount, issueDate, dueDate, newStatus, paymentDate, notes, createdAt, updatedAt);
     }
 
     public Long getId() {
@@ -118,6 +125,10 @@ public class Invoice {
 
     public String getNumber() {
         return number;
+    }
+
+    public Long getCustomerId() {
+        return customerId;
     }
 
     public String getCustomerName() {

@@ -33,7 +33,7 @@
                                 <Label text="Numero" GridPane.columnIndex="0" GridPane.rowIndex="0" />
                                 <TextField fx:id="invoiceNumberField" promptText="INV-..." GridPane.columnIndex="1" GridPane.rowIndex="0" />
                                 <Label text="Cliente" GridPane.columnIndex="2" GridPane.rowIndex="0" />
-                                <TextField fx:id="invoiceCustomerField" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+                                <ComboBox fx:id="invoiceCustomerCombo" promptText="Seleziona cliente" GridPane.columnIndex="3" GridPane.rowIndex="0" />
 
                                 <Label text="Contratto" GridPane.columnIndex="0" GridPane.rowIndex="1" />
                                 <TextField fx:id="invoiceContractField" promptText="ID contratto" GridPane.columnIndex="1" GridPane.rowIndex="1" />
@@ -62,6 +62,43 @@
                                 <Button fx:id="invoiceDeleteButton" text="Elimina" onAction="#onDeleteInvoice" />
                                 <Button fx:id="invoicePayButton" text="Registra pagamento" onAction="#onRegisterPayment" />
                             </HBox>
+                            <VBox spacing="6">
+                                <Label text="Righe fattura" />
+                                <GridPane hgap="8" vgap="8">
+                                    <columnConstraints>
+                                        <ColumnConstraints percentWidth="16" />
+                                        <ColumnConstraints percentWidth="34" />
+                                        <ColumnConstraints percentWidth="16" />
+                                        <ColumnConstraints percentWidth="34" />
+                                    </columnConstraints>
+                                    <Label text="Articolo" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                                    <ComboBox fx:id="invoiceLineArticleCombo" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                    <Label text="Descrizione" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+                                    <TextField fx:id="invoiceLineDescriptionField" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+
+                                    <Label text="Quantità" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                                    <TextField fx:id="invoiceLineQuantityField" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                    <Label text="Prezzo" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                                    <TextField fx:id="invoiceLinePriceField" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+
+                                    <Label text="IVA" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                                    <TextField fx:id="invoiceLineVatField" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                    <HBox spacing="8" GridPane.columnIndex="2" GridPane.rowIndex="2" GridPane.columnSpan="2">
+                                        <Button fx:id="invoiceLineAddButton" text="Aggiungi" onAction="#onAddInvoiceLine" />
+                                        <Button fx:id="invoiceLineRemoveButton" text="Rimuovi" onAction="#onRemoveInvoiceLine" />
+                                    </HBox>
+                                </GridPane>
+                                <TableView fx:id="invoiceLinesTable" prefHeight="160">
+                                    <columns>
+                                        <TableColumn fx:id="invoiceLineArticleColumn" text="Articolo" prefWidth="140" />
+                                        <TableColumn fx:id="invoiceLineDescriptionColumn" text="Descrizione" prefWidth="200" />
+                                        <TableColumn fx:id="invoiceLineQuantityColumn" text="Quantità" prefWidth="90" />
+                                        <TableColumn fx:id="invoiceLinePriceColumn" text="Prezzo" prefWidth="110" />
+                                        <TableColumn fx:id="invoiceLineVatColumn" text="IVA" prefWidth="80" />
+                                        <TableColumn fx:id="invoiceLineTotalColumn" text="Totale" prefWidth="110" />
+                                    </columns>
+                                </TableView>
+                            </VBox>
                         </VBox>
                     </top>
                     <center>
@@ -150,6 +187,96 @@
                             <PieChart fx:id="contractStatusChart" prefHeight="240" prefWidth="220" />
                         </VBox>
                     </right>
+                </BorderPane>
+            </Tab>
+            <Tab text="Clienti" closable="false">
+                <BorderPane>
+                    <top>
+                        <VBox spacing="8" padding="10">
+                            <GridPane hgap="8" vgap="8">
+                                <columnConstraints>
+                                    <ColumnConstraints percentWidth="16" />
+                                    <ColumnConstraints percentWidth="34" />
+                                    <ColumnConstraints percentWidth="16" />
+                                    <ColumnConstraints percentWidth="34" />
+                                </columnConstraints>
+                                <Label text="Nome" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                                <TextField fx:id="customerNameField" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                <Label text="Email" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+                                <TextField fx:id="customerEmailField" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+
+                                <Label text="Telefono" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                                <TextField fx:id="customerPhoneField" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                <Label text="P.IVA" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                                <TextField fx:id="customerVatField" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+
+                                <Label text="Codice fiscale" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                                <TextField fx:id="customerTaxCodeField" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                <Label text="Indirizzo" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+                                <TextField fx:id="customerAddressField" GridPane.columnIndex="3" GridPane.rowIndex="2" />
+                            </GridPane>
+                            <HBox spacing="8">
+                                <Button fx:id="customerSaveButton" text="Crea" onAction="#onCreateCustomer" />
+                                <Button fx:id="customerUpdateButton" text="Aggiorna" onAction="#onUpdateCustomer" />
+                                <Button fx:id="customerDeleteButton" text="Elimina" onAction="#onDeleteCustomer" />
+                            </HBox>
+                        </VBox>
+                    </top>
+                    <center>
+                        <TableView fx:id="customerTable">
+                            <columns>
+                                <TableColumn fx:id="customerNameColumn" text="Nome" prefWidth="180" />
+                                <TableColumn fx:id="customerEmailColumn" text="Email" prefWidth="200" />
+                                <TableColumn fx:id="customerPhoneColumn" text="Telefono" prefWidth="140" />
+                                <TableColumn fx:id="customerVatColumn" text="P.IVA" prefWidth="140" />
+                            </columns>
+                        </TableView>
+                    </center>
+                </BorderPane>
+            </Tab>
+            <Tab text="Articoli" closable="false">
+                <BorderPane>
+                    <top>
+                        <VBox spacing="8" padding="10">
+                            <GridPane hgap="8" vgap="8">
+                                <columnConstraints>
+                                    <ColumnConstraints percentWidth="16" />
+                                    <ColumnConstraints percentWidth="34" />
+                                    <ColumnConstraints percentWidth="16" />
+                                    <ColumnConstraints percentWidth="34" />
+                                </columnConstraints>
+                                <Label text="Codice" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                                <TextField fx:id="articleCodeField" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                <Label text="Nome" GridPane.columnIndex="2" GridPane.rowIndex="0" />
+                                <TextField fx:id="articleNameField" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+
+                                <Label text="Prezzo" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                                <TextField fx:id="articlePriceField" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                <Label text="IVA" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+                                <TextField fx:id="articleVatField" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+
+                                <Label text="Unità" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                                <TextField fx:id="articleUomField" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                <Label text="Descrizione" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                                <TextArea fx:id="articleDescriptionArea" GridPane.columnIndex="1" GridPane.rowIndex="3" GridPane.columnSpan="3" prefRowCount="2" />
+                            </GridPane>
+                            <HBox spacing="8">
+                                <Button fx:id="articleSaveButton" text="Crea" onAction="#onCreateArticle" />
+                                <Button fx:id="articleUpdateButton" text="Aggiorna" onAction="#onUpdateArticle" />
+                                <Button fx:id="articleDeleteButton" text="Elimina" onAction="#onDeleteArticle" />
+                            </HBox>
+                        </VBox>
+                    </top>
+                    <center>
+                        <TableView fx:id="articleTable">
+                            <columns>
+                                <TableColumn fx:id="articleCodeColumn" text="Codice" prefWidth="120" />
+                                <TableColumn fx:id="articleNameColumn" text="Nome" prefWidth="180" />
+                                <TableColumn fx:id="articlePriceColumn" text="Prezzo" prefWidth="120" />
+                                <TableColumn fx:id="articleVatColumn" text="IVA" prefWidth="100" />
+                            </columns>
+                        </TableView>
+                    </center>
                 </BorderPane>
             </Tab>
             <Tab text="Storico" closable="false">

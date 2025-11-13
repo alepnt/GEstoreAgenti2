@@ -1,14 +1,17 @@
 package com.example.server.service.mapper;
 
 import com.example.common.dto.InvoiceDTO;
+import com.example.server.domain.InvoiceLine;
 import com.example.server.domain.Invoice;
+
+import java.util.List;
 
 public final class InvoiceMapper {
 
     private InvoiceMapper() {
     }
 
-    public static InvoiceDTO toDto(Invoice invoice) {
+    public static InvoiceDTO toDto(Invoice invoice, List<InvoiceLine> lines) {
         if (invoice == null) {
             return null;
         }
@@ -16,13 +19,15 @@ public final class InvoiceMapper {
                 invoice.getId(),
                 invoice.getNumber(),
                 invoice.getContractId(),
+                invoice.getCustomerId(),
                 invoice.getCustomerName(),
                 invoice.getAmount(),
                 invoice.getIssueDate(),
                 invoice.getDueDate(),
                 invoice.getStatus(),
                 invoice.getPaymentDate(),
-                invoice.getNotes()
+                invoice.getNotes(),
+                lines != null ? lines.stream().map(InvoiceLineMapper::toDto).toList() : List.of()
         );
     }
 
@@ -34,6 +39,7 @@ public final class InvoiceMapper {
                 dto.getId(),
                 dto.getContractId(),
                 dto.getNumber(),
+                dto.getCustomerId(),
                 dto.getCustomerName(),
                 dto.getAmount(),
                 dto.getIssueDate(),
