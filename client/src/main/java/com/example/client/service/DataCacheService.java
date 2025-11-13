@@ -1,58 +1,86 @@
 package com.example.client.service;
 
-import com.example.common.command.CommandBus;
-import com.example.common.command.CommandContext;
-import com.example.common.command.CreateContractCommand;
-import com.example.common.command.CreateInvoiceCommand;
-import com.example.common.command.ListContractsCommand;
-import com.example.common.command.ListInvoicesCommand;
+import com.example.client.command.CommandExecutor;
+import com.example.client.command.CommandHistoryCaretaker;
+import com.example.client.command.CreateContractCommand;
+import com.example.client.command.CreateInvoiceCommand;
+import com.example.client.command.DeleteContractCommand;
+import com.example.client.command.DeleteInvoiceCommand;
+import com.example.client.command.LoadContractsCommand;
+import com.example.client.command.LoadInvoicesCommand;
+import com.example.client.command.RegisterInvoicePaymentCommand;
+import com.example.client.command.UpdateContractCommand;
+import com.example.client.command.UpdateInvoiceCommand;
 import com.example.common.dto.ContractDTO;
+import com.example.common.dto.DocumentHistoryDTO;
 import com.example.common.dto.InvoiceDTO;
-import com.example.common.enums.InvoiceStatus;
+import com.example.common.dto.InvoicePaymentRequest;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.Collection;
-import java.util.UUID;
+import java.util.List;
 
 /**
- * Servizio locale che riutilizza i comandi condivisi per mantenere una cache dei dati.
+ * Servizio client che orchestra le operazioni CRUD tramite Command pattern.
  */
 public class DataCacheService {
 
-    private final CommandContext context = new CommandContext();
-    private final CommandBus commandBus = new CommandBus(context);
+    private final BackendGateway backendGateway;
+    private final CommandHistoryCaretaker caretaker = new CommandHistoryCaretaker();
+    private final CommandExecutor executor;
 
     public DataCacheService() {
-        seedData();
+        this(new BackendGateway());
     }
 
-    public Collection<InvoiceDTO> getInvoices() {
-        return commandBus.dispatch(new ListInvoicesCommand());
+    public DataCacheService(BackendGateway backendGateway) {
+        this.backendGateway = backendGateway;
+        this.executor = new CommandExecutor(backendGateway, caretaker);
     }
 
-    public Collection<ContractDTO> getContracts() {
-        return commandBus.dispatch(new ListContractsCommand());
+    public List<InvoiceDTO> getInvoices() {
+        return executor.execute(new LoadInvoicesCommand()).value();
     }
 
-    public InvoiceDTO saveInvoice(InvoiceDTO invoiceDTO) {
-        if (invoiceDTO.getId() == null) {
-            invoiceDTO.setId(UUID.randomUUID().toString());
-        }
-        return commandBus.dispatch(new CreateInvoiceCommand(invoiceDTO));
+    public InvoiceDTO createInvoice(InvoiceDTO invoiceDTO) {
+        return executor.execute(new CreateInvoiceCommand(invoiceDTO)).value();
     }
 
-    public ContractDTO saveContract(ContractDTO contractDTO) {
-        if (contractDTO.getId() == null) {
-            contractDTO.setId(UUID.randomUUID().toString());
-        }
-        return commandBus.dispatch(new CreateContractCommand(contractDTO));
+    public InvoiceDTO updateInvoice(Long id, InvoiceDTO invoiceDTO) {
+        return executor.execute(new UpdateInvoiceCommand(id, invoiceDTO)).value();
     }
 
-    private void seedData() {
-        saveInvoice(new InvoiceDTO(UUID.randomUUID().toString(), "CUST-001", new BigDecimal("1200.00"), LocalDate.now().minusDays(10), InvoiceStatus.DRAFT));
-        saveInvoice(new InvoiceDTO(UUID.randomUUID().toString(), "CUST-002", new BigDecimal("800.50"), LocalDate.now().minusDays(3), InvoiceStatus.SENT));
-        saveContract(new ContractDTO(UUID.randomUUID().toString(), "AG-001", "Contratto di consulenza", LocalDate.now().minusMonths(2), LocalDate.now().plusMonths(10)));
-        saveContract(new ContractDTO(UUID.randomUUID().toString(), "AG-002", "Contratto di vendita", LocalDate.now().minusMonths(1), LocalDate.now().plusMonths(5)));
+    public void deleteInvoice(Long id) {
+        executor.execute(new DeleteInvoiceCommand(id));
+    }
+
+    public InvoiceDTO registerPayment(Long id, InvoicePaymentRequest paymentRequest) {
+        return executor.execute(new RegisterInvoicePaymentCommand(id, paymentRequest)).value();
+    }
+
+    public List<ContractDTO> getContracts() {
+        return executor.execute(new LoadContractsCommand()).value();
+    }
+
+    public ContractDTO createContract(ContractDTO contractDTO) {
+        return executor.execute(new CreateContractCommand(contractDTO)).value();
+    }
+
+    public ContractDTO updateContract(Long id, ContractDTO contractDTO) {
+        return executor.execute(new UpdateContractCommand(id, contractDTO)).value();
+    }
+
+    public void deleteContract(Long id) {
+        executor.execute(new DeleteContractCommand(id));
+    }
+
+    public List<DocumentHistoryDTO> getInvoiceHistory(Long id) {
+        return backendGateway.invoiceHistory(id);
+    }
+
+    public List<DocumentHistoryDTO> getContractHistory(Long id) {
+        return backendGateway.contractHistory(id);
+    }
+
+    public CommandHistoryCaretaker getCaretaker() {
+        return caretaker;
     }
 }

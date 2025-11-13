@@ -17,6 +17,9 @@ public class CreateInvoiceCommand implements Command<InvoiceDTO> {
 
     @Override
     public InvoiceDTO execute(CommandContext context) {
+        if (invoice.getId() == null) {
+            invoice.setId(context.nextInvoiceId());
+        }
         context.getInvoices().put(invoice.getId(), invoice);
         return invoice;
     }

@@ -1,5 +1,8 @@
 package com.example.common.dto;
 
+import com.example.common.enums.ContractStatus;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 
@@ -8,37 +11,58 @@ import java.util.Objects;
  */
 public class ContractDTO {
 
-    private String id;
-    private String agentId;
+    private Long id;
+    private Long agentId;
+    private String customerName;
     private String description;
     private LocalDate startDate;
     private LocalDate endDate;
+    private BigDecimal totalValue;
+    private ContractStatus status;
 
     public ContractDTO() {
     }
 
-    public ContractDTO(String id, String agentId, String description, LocalDate startDate, LocalDate endDate) {
+    public ContractDTO(Long id,
+                       Long agentId,
+                       String customerName,
+                       String description,
+                       LocalDate startDate,
+                       LocalDate endDate,
+                       BigDecimal totalValue,
+                       ContractStatus status) {
         this.id = id;
         this.agentId = agentId;
+        this.customerName = customerName;
         this.description = description;
         this.startDate = startDate;
         this.endDate = endDate;
+        this.totalValue = totalValue;
+        this.status = status;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public String getAgentId() {
+    public Long getAgentId() {
         return agentId;
     }
 
-    public void setAgentId(String agentId) {
+    public void setAgentId(Long agentId) {
         this.agentId = agentId;
+    }
+
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    public void setCustomerName(String customerName) {
+        this.customerName = customerName;
     }
 
     public String getDescription() {
@@ -65,6 +89,22 @@ public class ContractDTO {
         this.endDate = endDate;
     }
 
+    public BigDecimal getTotalValue() {
+        return totalValue;
+    }
+
+    public void setTotalValue(BigDecimal totalValue) {
+        this.totalValue = totalValue;
+    }
+
+    public ContractStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ContractStatus status) {
+        this.status = status;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -85,11 +125,14 @@ public class ContractDTO {
     @Override
     public String toString() {
         return "ContractDTO{" +
-                "id='" + id + '\'' +
-                ", agentId='" + agentId + '\'' +
+                "id=" + id +
+                ", agentId=" + agentId +
+                ", customerName='" + customerName + '\'' +
                 ", description='" + description + '\'' +
                 ", startDate=" + startDate +
                 ", endDate=" + endDate +
+                ", totalValue=" + totalValue +
+                ", status=" + status +
                 '}';
     }
 }

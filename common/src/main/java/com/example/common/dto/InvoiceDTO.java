@@ -11,37 +11,72 @@ import java.util.Objects;
  */
 public class InvoiceDTO {
 
-    private String id;
-    private String customerId;
+    private Long id;
+    private String number;
+    private Long contractId;
+    private String customerName;
     private BigDecimal amount;
     private LocalDate issueDate;
+    private LocalDate dueDate;
     private InvoiceStatus status;
+    private LocalDate paymentDate;
+    private String notes;
 
     public InvoiceDTO() {
     }
 
-    public InvoiceDTO(String id, String customerId, BigDecimal amount, LocalDate issueDate, InvoiceStatus status) {
+    public InvoiceDTO(Long id,
+                      String number,
+                      Long contractId,
+                      String customerName,
+                      BigDecimal amount,
+                      LocalDate issueDate,
+                      LocalDate dueDate,
+                      InvoiceStatus status,
+                      LocalDate paymentDate,
+                      String notes) {
         this.id = id;
-        this.customerId = customerId;
+        this.number = number;
+        this.contractId = contractId;
+        this.customerName = customerName;
         this.amount = amount;
         this.issueDate = issueDate;
+        this.dueDate = dueDate;
         this.status = status;
+        this.paymentDate = paymentDate;
+        this.notes = notes;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public String getCustomerId() {
-        return customerId;
+    public String getNumber() {
+        return number;
     }
 
-    public void setCustomerId(String customerId) {
-        this.customerId = customerId;
+    public void setNumber(String number) {
+        this.number = number;
+    }
+
+    public Long getContractId() {
+        return contractId;
+    }
+
+    public void setContractId(Long contractId) {
+        this.contractId = contractId;
+    }
+
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    public void setCustomerName(String customerName) {
+        this.customerName = customerName;
     }
 
     public BigDecimal getAmount() {
@@ -60,12 +95,36 @@ public class InvoiceDTO {
         this.issueDate = issueDate;
     }
 
+    public LocalDate getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(LocalDate dueDate) {
+        this.dueDate = dueDate;
+    }
+
     public InvoiceStatus getStatus() {
         return status;
     }
 
     public void setStatus(InvoiceStatus status) {
         this.status = status;
+    }
+
+    public LocalDate getPaymentDate() {
+        return paymentDate;
+    }
+
+    public void setPaymentDate(LocalDate paymentDate) {
+        this.paymentDate = paymentDate;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 
     @Override
@@ -88,11 +147,16 @@ public class InvoiceDTO {
     @Override
     public String toString() {
         return "InvoiceDTO{" +
-                "id='" + id + '\'' +
-                ", customerId='" + customerId + '\'' +
+                "id=" + id +
+                ", number='" + number + '\'' +
+                ", contractId=" + contractId +
+                ", customerName='" + customerName + '\'' +
                 ", amount=" + amount +
                 ", issueDate=" + issueDate +
+                ", dueDate=" + dueDate +
                 ", status=" + status +
+                ", paymentDate=" + paymentDate +
+                ", notes='" + notes + '\'' +
                 '}';
     }
 }

@@ -1,6 +1,7 @@
 package com.example.common.api;
 
 import com.example.common.dto.ContractDTO;
+import com.example.common.dto.DocumentHistoryDTO;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,11 +13,13 @@ public interface ContractApiContract {
 
     List<ContractDTO> listContracts();
 
-    Optional<ContractDTO> findById(String id);
+    Optional<ContractDTO> findById(Long id);
 
     ContractDTO create(ContractDTO contractDTO);
 
-    ContractDTO update(String id, ContractDTO contractDTO);
+    ContractDTO update(Long id, ContractDTO contractDTO);
 
-    void delete(String id);
+    void delete(Long id);
+
+    List<DocumentHistoryDTO> history(Long id);
 }

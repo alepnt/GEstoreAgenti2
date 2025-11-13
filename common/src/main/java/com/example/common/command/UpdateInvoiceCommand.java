@@ -10,16 +10,19 @@ import java.util.Optional;
  */
 public class UpdateInvoiceCommand implements Command<Optional<InvoiceDTO>> {
 
-    private final String id;
+    private final Long id;
     private final InvoiceDTO invoice;
 
-    public UpdateInvoiceCommand(String id, InvoiceDTO invoice) {
+    public UpdateInvoiceCommand(Long id, InvoiceDTO invoice) {
         this.id = Objects.requireNonNull(id, "id");
         this.invoice = Objects.requireNonNull(invoice, "invoice");
     }
 
     @Override
     public Optional<InvoiceDTO> execute(CommandContext context) {
-        return Optional.ofNullable(context.getInvoices().computeIfPresent(id, (key, existing) -> invoice));
+        return Optional.ofNullable(context.getInvoices().computeIfPresent(id, (key, existing) -> {
+            invoice.setId(id);
+            return invoice;
+        }));
     }
 }

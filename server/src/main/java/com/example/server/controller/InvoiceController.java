@@ -1,9 +1,11 @@
 package com.example.server.controller;
 
 import com.example.common.api.InvoiceApiContract;
+import com.example.common.dto.DocumentHistoryDTO;
 import com.example.common.dto.InvoiceDTO;
+import com.example.common.dto.InvoicePaymentRequest;
 import com.example.server.service.InvoiceService;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,14 +14,11 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Esempio di controller REST conforme al contratto condiviso.
- */
 @RestController
 @RequestMapping("/api/invoices")
 public class InvoiceController implements InvoiceApiContract {
@@ -33,16 +32,13 @@ public class InvoiceController implements InvoiceApiContract {
     @Override
     @GetMapping
     public List<InvoiceDTO> listInvoices() {
-        Collection<InvoiceDTO> invoices = invoiceService.listInvoices();
-        return List.copyOf(invoices);
+        return invoiceService.findAll();
     }
 
     @Override
     @GetMapping("/{id}")
-    public Optional<InvoiceDTO> findById(@PathVariable String id) {
-        return invoiceService.listInvoices().stream()
-                .filter(invoice -> invoice.getId().equals(id))
-                .findFirst();
+    public Optional<InvoiceDTO> findById(@PathVariable Long id) {
+        return invoiceService.findById(id);
     }
 
     @Override
@@ -53,22 +49,31 @@ public class InvoiceController implements InvoiceApiContract {
 
     @Override
     @PutMapping("/{id}")
-    public InvoiceDTO update(@PathVariable String id, @RequestBody InvoiceDTO invoiceDTO) {
+    public InvoiceDTO update(@PathVariable Long id, @RequestBody InvoiceDTO invoiceDTO) {
         return invoiceService.update(id, invoiceDTO)
-                .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invoice not found"));
     }
 
     @Override
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable String id) {
-        invoiceService.delete(id)
-                .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
+    public void delete(@PathVariable Long id) {
+        boolean deleted = invoiceService.delete(id);
+        if (!deleted) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invoice not found");
+        }
     }
 
-    @GetMapping("/{id}/response")
-    public ResponseEntity<InvoiceDTO> getInvoiceResponse(@PathVariable String id) {
-        return findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @Override
+    @PostMapping("/{id}/payments")
+    public InvoiceDTO registerPayment(@PathVariable Long id, @RequestBody InvoicePaymentRequest paymentRequest) {
+        return invoiceService.registerPayment(id, paymentRequest)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invoice not found"));
     }
+
+    @Override
+    @GetMapping("/{id}/history")
+    public List<DocumentHistoryDTO> history(@PathVariable Long id) {
+        return invoiceService.history(id);
+    }
+
 }

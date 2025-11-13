@@ -6,20 +6,23 @@ import com.example.common.dto.InvoiceDTO;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Contesto generico per l'esecuzione dei comandi CRUD.
  */
 public class CommandContext {
 
-    private final Map<String, InvoiceDTO> invoices = new ConcurrentHashMap<>();
-    private final Map<String, ContractDTO> contracts = new ConcurrentHashMap<>();
+    private final Map<Long, InvoiceDTO> invoices = new ConcurrentHashMap<>();
+    private final Map<Long, ContractDTO> contracts = new ConcurrentHashMap<>();
+    private final AtomicLong invoiceSequence = new AtomicLong();
+    private final AtomicLong contractSequence = new AtomicLong();
 
-    public Map<String, InvoiceDTO> getInvoices() {
+    public Map<Long, InvoiceDTO> getInvoices() {
         return invoices;
     }
 
-    public Map<String, ContractDTO> getContracts() {
+    public Map<Long, ContractDTO> getContracts() {
         return contracts;
     }
 
@@ -29,5 +32,13 @@ public class CommandContext {
 
     public Collection<ContractDTO> contractValues() {
         return contracts.values();
+    }
+
+    public long nextInvoiceId() {
+        return invoiceSequence.incrementAndGet();
+    }
+
+    public long nextContractId() {
+        return contractSequence.incrementAndGet();
     }
 }

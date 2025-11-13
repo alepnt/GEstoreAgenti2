@@ -9,9 +9,9 @@ import java.util.Optional;
  */
 public class DeleteInvoiceCommand implements Command<Optional<InvoiceDTO>> {
 
-    private final String id;
+    private final Long id;
 
-    public DeleteInvoiceCommand(String id) {
+    public DeleteInvoiceCommand(Long id) {
         this.id = id;
     }
 

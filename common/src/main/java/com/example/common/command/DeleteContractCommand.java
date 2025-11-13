@@ -9,9 +9,9 @@ import java.util.Optional;
  */
 public class DeleteContractCommand implements Command<Optional<ContractDTO>> {
 
-    private final String id;
+    private final Long id;
 
-    public DeleteContractCommand(String id) {
+    public DeleteContractCommand(Long id) {
         this.id = id;
     }
 

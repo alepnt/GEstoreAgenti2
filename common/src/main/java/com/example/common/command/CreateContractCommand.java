@@ -17,6 +17,9 @@ public class CreateContractCommand implements Command<ContractDTO> {
 
     @Override
     public ContractDTO execute(CommandContext context) {
+        if (contract.getId() == null) {
+            contract.setId(context.nextContractId());
+        }
         context.getContracts().put(contract.getId(), contract);
         return contract;
     }
