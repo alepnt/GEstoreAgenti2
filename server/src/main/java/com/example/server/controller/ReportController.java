@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/reports")
@@ -28,11 +29,12 @@ public class ReportController {
                                                  @RequestParam(value = "to", required = false)
                                                  @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
                                                  @RequestParam(value = "agentId", required = false) Long agentId) {
-        byte[] pdf = reportService.generateClosedInvoicesReport(from, to, agentId);
+        byte[] pdf = Objects.requireNonNull(reportService.generateClosedInvoicesReport(from, to, agentId),
+                "generated report must not be null");
         String filename = "report-fatture-chiuse-" + System.currentTimeMillis() + ".pdf";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
-                .contentType(MediaType.APPLICATION_PDF)
+                .contentType(Objects.requireNonNull(MediaType.APPLICATION_PDF, "mediaType must not be null"))
                 .body(pdf);
     }
 }

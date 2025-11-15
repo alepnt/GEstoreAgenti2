@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -33,7 +34,8 @@ public class CommissionService {
             return Optional.empty();
         }
 
-        Optional<Contract> contract = contractRepository.findById(contractId);
+        Long requiredContractId = Objects.requireNonNull(contractId, "contractId must not be null");
+        Optional<Contract> contract = contractRepository.findById(requiredContractId);
         if (contract.isEmpty()) {
             return Optional.empty();
         }
@@ -43,8 +45,9 @@ public class CommissionService {
         BigDecimal paidCommissionValue = computeCommission(amountPaid);
 
         Commission base = commissionRepository
-                .findByAgentIdAndContractId(agentId, contractId)
-                .orElseGet(() -> Commission.create(agentId, contractId, BigDecimal.ZERO));
+                .findByAgentIdAndContractId(agentId, requiredContractId)
+                .orElseGet(() -> Objects.requireNonNull(Commission.create(agentId, requiredContractId, BigDecimal.ZERO),
+                        "base commission must not be null"));
 
         BigDecimal totalCommission = base.getTotalCommission().add(commissionValue);
         BigDecimal paidCommission = base.getPaidCommission().add(paidCommissionValue);
@@ -53,7 +56,8 @@ public class CommissionService {
             pendingCommission = BigDecimal.ZERO;
         }
 
-        Commission updated = base.update(totalCommission, paidCommission, pendingCommission, Instant.now(clock));
+        Commission updated = Objects.requireNonNull(base.update(totalCommission, paidCommission, pendingCommission,
+                Instant.now(clock)), "updated commission must not be null");
         return Optional.of(commissionRepository.save(updated));
     }
 

@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -62,21 +63,25 @@ public class ChatService {
 
     public List<ChatMessageResponse> getMessages(Long userId, String conversationId, Instant since) {
         User user = requireUser(userId);
-        assertCanAccess(user, conversationId);
+        String requiredConversationId = Objects.requireNonNull(conversationId, "conversationId must not be null");
+        assertCanAccess(user, requiredConversationId);
 
         List<Message> messages = Optional.ofNullable(since)
                 .map(instant -> messageRepository
-                        .findByConversationIdAndCreatedAtAfterOrderByCreatedAtAsc(conversationId, instant))
-                .orElseGet(() -> messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId));
+                        .findByConversationIdAndCreatedAtAfterOrderByCreatedAtAsc(requiredConversationId, instant))
+                .orElseGet(() -> messageRepository.findByConversationIdOrderByCreatedAtAsc(requiredConversationId));
 
         return messages.stream().map(this::toResponse).toList();
     }
 
     public ChatMessageResponse sendMessage(ChatMessageRequest request) {
-        User sender = requireUser(request.senderId());
-        assertCanAccess(sender, request.conversationId());
-        Message message = Message.create(request.conversationId(), sender.getId(), sender.getTeamId(),
-                request.body(), Instant.now(clock));
+        ChatMessageRequest requiredRequest = Objects.requireNonNull(request, "request must not be null");
+        User sender = requireUser(requiredRequest.senderId());
+        String conversationId = Objects.requireNonNull(requiredRequest.conversationId(),
+                "conversationId must not be null");
+        assertCanAccess(sender, conversationId);
+        Message message = Objects.requireNonNull(Message.create(conversationId, sender.getId(), sender.getTeamId(),
+                requiredRequest.body(), Instant.now(clock)), "message must not be null");
         Message saved = messageRepository.save(message);
         ChatMessageResponse response = toResponse(saved);
         chatPublisher.publish(response);
@@ -87,28 +92,32 @@ public class ChatService {
                                              String conversationId,
                                              DeferredResult<List<ChatMessageResponse>> deferredResult) {
         User user = requireUser(userId);
-        assertCanAccess(user, conversationId);
+        String requiredConversationId = Objects.requireNonNull(conversationId, "conversationId must not be null");
+        DeferredResult<List<ChatMessageResponse>> requiredDeferredResult = Objects.requireNonNull(deferredResult,
+                "deferredResult must not be null");
+        assertCanAccess(user, requiredConversationId);
 
         AtomicBoolean pending = new AtomicBoolean(true);
         List<ChatPublisher.Subscription> subscriptions = new ArrayList<>();
 
-        subscriptions.add(chatPublisher.subscribe(conversationId, message -> {
+        subscriptions.add(chatPublisher.subscribe(requiredConversationId, message -> {
             if (pending.getAndSet(false)) {
-                deferredResult.setResult(List.of(message));
+                requiredDeferredResult.setResult(List.of(message));
             }
         }));
 
         Runnable cancel = () -> subscriptions.forEach(ChatPublisher.Subscription::cancel);
-        deferredResult.onCompletion(cancel);
-        deferredResult.onTimeout(() -> {
-            deferredResult.setResult(List.of());
+        requiredDeferredResult.onCompletion(cancel);
+        requiredDeferredResult.onTimeout(() -> {
+            requiredDeferredResult.setResult(List.of());
             cancel.run();
         });
     }
 
     private User requireUser(Long id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Utente non trovato: " + id));
+        Long requiredId = Objects.requireNonNull(id, "id must not be null");
+        return userRepository.findById(requiredId)
+                .orElseThrow(() -> new IllegalArgumentException("Utente non trovato: " + requiredId));
     }
 
     private void assertCanAccess(User user, String conversationId) {

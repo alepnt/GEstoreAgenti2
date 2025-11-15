@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -27,37 +28,44 @@ public class CustomerService {
     }
 
     public Optional<CustomerDTO> findById(Long id) {
-        return customerRepository.findById(id).map(CustomerMapper::toDto);
+        return customerRepository.findById(Objects.requireNonNull(id, "id must not be null"))
+                .map(CustomerMapper::toDto);
     }
 
     @Transactional
     public CustomerDTO create(CustomerDTO dto) {
-        validate(dto);
-        Customer customer = CustomerMapper.fromDto(dto);
-        Customer saved = customerRepository.save(Customer.create(
+        CustomerDTO validatedDto = Objects.requireNonNull(dto, "customer must not be null");
+        validate(validatedDto);
+        Customer customer = Objects.requireNonNull(CustomerMapper.fromDto(validatedDto),
+                "mapped customer must not be null");
+        Customer toSave = Objects.requireNonNull(Customer.create(
                 normalize(customer.getName()),
                 normalize(customer.getVatNumber()),
                 normalize(customer.getTaxCode()),
                 normalize(customer.getEmail()),
                 normalize(customer.getPhone()),
                 normalize(customer.getAddress())
-        ));
+        ), "created customer must not be null");
+        Customer saved = customerRepository.save(toSave);
         return CustomerMapper.toDto(saved);
     }
 
     @Transactional
     public Optional<CustomerDTO> update(Long id, CustomerDTO dto) {
-        validate(dto);
-        return customerRepository.findById(id)
+        CustomerDTO validatedDto = Objects.requireNonNull(dto, "customer must not be null");
+        validate(validatedDto);
+        return customerRepository.findById(Objects.requireNonNull(id, "id must not be null"))
                 .map(existing -> {
-                    Customer updated = existing.updateFrom(Customer.create(
-                            normalize(dto.getName()),
-                            normalize(dto.getVatNumber()),
-                            normalize(dto.getTaxCode()),
-                            normalize(dto.getEmail()),
-                            normalize(dto.getPhone()),
-                            normalize(dto.getAddress())
-                    ));
+                    Customer updateSource = Objects.requireNonNull(Customer.create(
+                            normalize(validatedDto.getName()),
+                            normalize(validatedDto.getVatNumber()),
+                            normalize(validatedDto.getTaxCode()),
+                            normalize(validatedDto.getEmail()),
+                            normalize(validatedDto.getPhone()),
+                            normalize(validatedDto.getAddress())
+                    ), "created customer must not be null");
+                    Customer updated = Objects.requireNonNull(existing.updateFrom(updateSource),
+                            "updated customer must not be null");
                     Customer saved = customerRepository.save(updated);
                     return CustomerMapper.toDto(saved);
                 });
@@ -65,7 +73,7 @@ public class CustomerService {
 
     @Transactional
     public boolean delete(Long id) {
-        return customerRepository.findById(id)
+        return customerRepository.findById(Objects.requireNonNull(id, "id must not be null"))
                 .map(existing -> {
                     customerRepository.deleteById(id);
                     return true;
@@ -74,7 +82,7 @@ public class CustomerService {
     }
 
     public Customer require(Long id) {
-        return customerRepository.findById(id)
+        return customerRepository.findById(Objects.requireNonNull(id, "id must not be null"))
                 .orElseThrow(() -> new IllegalArgumentException("Cliente non trovato"));
     }
 

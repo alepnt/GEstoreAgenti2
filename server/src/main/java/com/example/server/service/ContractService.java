@@ -11,6 +11,7 @@ import com.example.server.service.mapper.DocumentHistoryMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -32,38 +33,54 @@ public class ContractService {
     }
 
     public Optional<ContractDTO> findById(Long id) {
-        return contractRepository.findById(id).map(ContractMapper::toDto);
+        return contractRepository.findById(Objects.requireNonNull(id, "id must not be null"))
+                .map(ContractMapper::toDto);
     }
 
     public ContractDTO create(ContractDTO dto) {
-        Contract contract = ContractMapper.fromDto(dto);
+        ContractDTO requiredDto = Objects.requireNonNull(dto, "contract must not be null");
+        Contract contract = Objects.requireNonNull(ContractMapper.fromDto(requiredDto),
+                "mapped contract must not be null");
         Contract saved = contractRepository.save(contract);
-        documentHistoryService.log(DocumentType.CONTRACT, saved.getId(), DocumentAction.CREATED, "Contratto creato: " + saved.getDescription());
+        documentHistoryService.log(DocumentType.CONTRACT,
+                Objects.requireNonNull(saved.getId(), "contract id must not be null"),
+                DocumentAction.CREATED,
+                "Contratto creato: " + saved.getDescription());
         return ContractMapper.toDto(saved);
     }
 
     public Optional<ContractDTO> update(Long id, ContractDTO dto) {
-        return contractRepository.findById(id)
-                .map(existing -> existing.updateFrom(ContractMapper.fromDto(dto)))
+        ContractDTO requiredDto = Objects.requireNonNull(dto, "contract must not be null");
+        return contractRepository.findById(Objects.requireNonNull(id, "id must not be null"))
+                .map(existing -> Objects.requireNonNull(existing.updateFrom(Objects.requireNonNull(
+                        ContractMapper.fromDto(requiredDto), "mapped contract must not be null")),
+                        "updated contract must not be null"))
                 .map(contractRepository::save)
                 .map(saved -> {
-                    documentHistoryService.log(DocumentType.CONTRACT, saved.getId(), DocumentAction.UPDATED, "Contratto aggiornato");
+                    documentHistoryService.log(DocumentType.CONTRACT,
+                            Objects.requireNonNull(saved.getId(), "contract id must not be null"),
+                            DocumentAction.UPDATED,
+                            "Contratto aggiornato");
                     return ContractMapper.toDto(saved);
                 });
     }
 
     public boolean delete(Long id) {
-        return contractRepository.findById(id)
+        Long requiredId = Objects.requireNonNull(id, "id must not be null");
+        return contractRepository.findById(requiredId)
                 .map(contract -> {
-                    contractRepository.deleteById(id);
-                    documentHistoryService.log(DocumentType.CONTRACT, contract.getId(), DocumentAction.DELETED, "Contratto eliminato");
+                    contractRepository.deleteById(requiredId);
+                    documentHistoryService.log(DocumentType.CONTRACT,
+                            Objects.requireNonNull(contract.getId(), "contract id must not be null"),
+                            DocumentAction.DELETED,
+                            "Contratto eliminato");
                     return true;
                 })
                 .orElse(false);
     }
 
     public List<DocumentHistoryDTO> history(Long id) {
-        return documentHistoryService.list(DocumentType.CONTRACT, id).stream()
+        return documentHistoryService.list(DocumentType.CONTRACT, Objects.requireNonNull(id, "id must not be null")).stream()
                 .map(DocumentHistoryMapper::toDto)
                 .collect(Collectors.toList());
     }

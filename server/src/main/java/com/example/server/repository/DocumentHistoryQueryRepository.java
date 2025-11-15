@@ -15,6 +15,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Repository custom per interrogare lo storico documentale con filtri dinamici e paginazione.
@@ -50,28 +51,33 @@ public class DocumentHistoryQueryRepository {
 
     public ResultPage find(DocumentHistoryQuery query) {
         QueryParts parts = buildQuery(query);
-        MapSqlParameterSource parameters = parts.parameters;
+        String fromClause = Objects.requireNonNull(parts.fromClause(), "fromClause must not be null");
+        MapSqlParameterSource parameters = Objects.requireNonNull(parts.parameters(), "parameters must not be null");
         StringBuilder sql = new StringBuilder("SELECT id, document_type, document_id, action, description, created_at ")
-                .append(parts.fromClause)
+                .append(fromClause)
                 .append(" ORDER BY created_at DESC");
         if (query.isPaginated()) {
             sql.append(" OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY");
             parameters.addValue("offset", query.offset());
             parameters.addValue("limit", query.getSize());
         }
-        List<DocumentHistory> items = jdbcTemplate.query(sql.toString(), parameters, ROW_MAPPER);
-        long total = query.isPaginated()
-                ? jdbcTemplate.queryForObject("SELECT COUNT(*) " + parts.fromClause, parameters, Long.class)
-                : items.size();
+        List<DocumentHistory> items = jdbcTemplate.query(sql.toString(), parameters,
+                Objects.requireNonNull(ROW_MAPPER, "rowMapper must not be null"));
+        Long totalCount = query.isPaginated()
+                ? jdbcTemplate.queryForObject("SELECT COUNT(*) " + fromClause, parameters, Long.class)
+                : null;
+        long total = totalCount != null ? totalCount : items.size();
         return new ResultPage(items, total);
     }
 
     public List<DocumentHistory> findAll(DocumentHistoryQuery query) {
         QueryParts parts = buildQuery(query.withoutPagination());
+        String fromClause = Objects.requireNonNull(parts.fromClause(), "fromClause must not be null");
+        MapSqlParameterSource parameters = Objects.requireNonNull(parts.parameters(), "parameters must not be null");
         String sql = "SELECT id, document_type, document_id, action, description, created_at "
-                + parts.fromClause
+                + fromClause
                 + " ORDER BY created_at DESC";
-        return jdbcTemplate.query(sql, parts.parameters, ROW_MAPPER);
+        return jdbcTemplate.query(sql, parameters, Objects.requireNonNull(ROW_MAPPER, "rowMapper must not be null"));
     }
 
     private QueryParts buildQuery(DocumentHistoryQuery query) {

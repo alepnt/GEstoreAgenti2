@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -52,30 +53,35 @@ public class InvoiceService {
 
     public List<InvoiceDTO> findAll() {
         return invoiceRepository.findAllByOrderByIssueDateDesc().stream()
-                .map(invoice -> InvoiceMapper.toDto(invoice, invoiceLineRepository.findByInvoiceIdOrderById(invoice.getId())))
+                .map(invoice -> {
+                    Long invoiceId = Objects.requireNonNull(invoice.getId(), "invoice id must not be null");
+                    return InvoiceMapper.toDto(invoice, invoiceLineRepository.findByInvoiceIdOrderById(invoiceId));
+                })
                 .toList();
     }
 
     public Optional<InvoiceDTO> findById(Long id) {
-        return invoiceRepository.findById(id)
-                .map(invoice -> InvoiceMapper.toDto(invoice, invoiceLineRepository.findByInvoiceIdOrderById(invoice.getId())));
+        return invoiceRepository.findById(Objects.requireNonNull(id, "id must not be null"))
+                .map(invoice -> {
+                    Long invoiceId = Objects.requireNonNull(invoice.getId(), "invoice id must not be null");
+                    return InvoiceMapper.toDto(invoice, invoiceLineRepository.findByInvoiceIdOrderById(invoiceId));
+                });
     }
 
     @Transactional
     public InvoiceDTO create(InvoiceDTO dto) {
-        Invoice source = InvoiceMapper.fromDto(dto);
-        if (source.getCustomerId() == null) {
-            throw new IllegalArgumentException("Il cliente è obbligatorio");
-        }
-        String customerName = customerService.require(source.getCustomerId()).getName();
-        List<InvoiceLine> lines = prepareInvoiceLines(dto.getLines());
+        InvoiceDTO requiredDto = Objects.requireNonNull(dto, "invoice must not be null");
+        Invoice source = Objects.requireNonNull(InvoiceMapper.fromDto(requiredDto), "mapped invoice must not be null");
+        Long customerId = Objects.requireNonNull(source.getCustomerId(), "customerId must not be null");
+        String customerName = customerService.require(customerId).getName();
+        List<InvoiceLine> lines = prepareInvoiceLines(requiredDto.getLines());
         BigDecimal amount = determineAmount(source.getAmount(), lines);
         String number = StringUtils.hasText(source.getNumber()) ? source.getNumber() : generateNumber();
         Invoice invoice = new Invoice(
                 null,
                 source.getContractId(),
                 number,
-                source.getCustomerId(),
+                customerId,
                 customerName,
                 amount,
                 source.getIssueDate(),
@@ -87,28 +93,30 @@ public class InvoiceService {
                 null
         );
         Invoice saved = invoiceRepository.save(invoice);
-        replaceInvoiceLines(saved.getId(), lines);
-        documentHistoryService.log(DocumentType.INVOICE, saved.getId(), DocumentAction.CREATED, "Fattura creata: " + saved.getNumber());
+        Long savedId = Objects.requireNonNull(saved.getId(), "invoice id must not be null");
+        replaceInvoiceLines(savedId, lines);
+        documentHistoryService.log(DocumentType.INVOICE, savedId, DocumentAction.CREATED,
+                "Fattura creata: " + saved.getNumber());
         statisticsService.clearCache();
-        return InvoiceMapper.toDto(saved, invoiceLineRepository.findByInvoiceIdOrderById(saved.getId()));
+        return InvoiceMapper.toDto(saved, invoiceLineRepository.findByInvoiceIdOrderById(savedId));
     }
 
     @Transactional
     public Optional<InvoiceDTO> update(Long id, InvoiceDTO dto) {
-        return invoiceRepository.findById(id)
+        InvoiceDTO requiredDto = Objects.requireNonNull(dto, "invoice must not be null");
+        return invoiceRepository.findById(Objects.requireNonNull(id, "id must not be null"))
                 .map(existing -> {
-                    Invoice updatedSource = InvoiceMapper.fromDto(dto);
-                    if (updatedSource.getCustomerId() == null) {
-                        throw new IllegalArgumentException("Il cliente è obbligatorio");
-                    }
-                    String customerName = customerService.require(updatedSource.getCustomerId()).getName();
-                    List<InvoiceLine> lines = prepareInvoiceLines(dto.getLines());
+                    Invoice updatedSource = Objects.requireNonNull(InvoiceMapper.fromDto(requiredDto),
+                            "mapped invoice must not be null");
+                    Long customerId = Objects.requireNonNull(updatedSource.getCustomerId(), "customerId must not be null");
+                    String customerName = customerService.require(customerId).getName();
+                    List<InvoiceLine> lines = prepareInvoiceLines(requiredDto.getLines());
                     BigDecimal amount = determineAmount(updatedSource.getAmount(), lines);
                     Invoice updated = new Invoice(
                             existing.getId(),
                             updatedSource.getContractId(),
                             StringUtils.hasText(updatedSource.getNumber()) ? updatedSource.getNumber() : existing.getNumber(),
-                            updatedSource.getCustomerId(),
+                            customerId,
                             customerName,
                             amount,
                             updatedSource.getIssueDate(),
@@ -120,24 +128,29 @@ public class InvoiceService {
                             existing.getUpdatedAt()
                     );
                     Invoice saved = invoiceRepository.save(updated);
-                    replaceInvoiceLines(saved.getId(), lines);
-                    documentHistoryService.log(DocumentType.INVOICE, saved.getId(), DocumentAction.UPDATED, "Fattura aggiornata");
+                    Long savedId = Objects.requireNonNull(saved.getId(), "invoice id must not be null");
+                    replaceInvoiceLines(savedId, lines);
+                    documentHistoryService.log(DocumentType.INVOICE, savedId, DocumentAction.UPDATED, "Fattura aggiornata");
                     if (existing.getStatus() != saved.getStatus()) {
-                        documentHistoryService.log(DocumentType.INVOICE, saved.getId(), DocumentAction.STATUS_CHANGED,
+                        documentHistoryService.log(DocumentType.INVOICE, savedId, DocumentAction.STATUS_CHANGED,
                                 "Stato cambiato da " + existing.getStatus() + " a " + saved.getStatus());
                     }
                     statisticsService.clearCache();
-                    return InvoiceMapper.toDto(saved, invoiceLineRepository.findByInvoiceIdOrderById(saved.getId()));
+                    return InvoiceMapper.toDto(saved, invoiceLineRepository.findByInvoiceIdOrderById(savedId));
                 });
     }
 
     @Transactional
     public boolean delete(Long id) {
-        return invoiceRepository.findById(id)
+        Long requiredId = Objects.requireNonNull(id, "id must not be null");
+        return invoiceRepository.findById(requiredId)
                 .map(invoice -> {
-                    invoiceRepository.deleteById(id);
-                    invoiceLineRepository.deleteByInvoiceId(id);
-                    documentHistoryService.log(DocumentType.INVOICE, invoice.getId(), DocumentAction.DELETED, "Fattura eliminata");
+                    invoiceRepository.deleteById(requiredId);
+                    invoiceLineRepository.deleteByInvoiceId(requiredId);
+                    documentHistoryService.log(DocumentType.INVOICE,
+                            Objects.requireNonNull(invoice.getId(), "invoice id must not be null"),
+                            DocumentAction.DELETED,
+                            "Fattura eliminata");
                     statisticsService.clearCache();
                     return true;
                 })
@@ -146,21 +159,24 @@ public class InvoiceService {
 
     @Transactional
     public Optional<InvoiceDTO> registerPayment(Long id, InvoicePaymentRequest paymentRequest) {
-        LocalDate paymentDate = paymentRequest.getPaymentDate() != null ? paymentRequest.getPaymentDate() : LocalDate.now();
-        return invoiceRepository.findById(id)
+        InvoicePaymentRequest requiredRequest = Objects.requireNonNull(paymentRequest,
+                "paymentRequest must not be null");
+        LocalDate paymentDate = requiredRequest.getPaymentDate() != null ? requiredRequest.getPaymentDate() : LocalDate.now();
+        return invoiceRepository.findById(Objects.requireNonNull(id, "id must not be null"))
                 .map(invoice -> {
                     Invoice saved = invoiceRepository.save(invoice.registerPayment(paymentDate, InvoiceStatus.PAID));
-                    documentHistoryService.log(DocumentType.INVOICE, saved.getId(), DocumentAction.PAYMENT_REGISTERED,
+                    Long savedId = Objects.requireNonNull(saved.getId(), "invoice id must not be null");
+                    documentHistoryService.log(DocumentType.INVOICE, savedId, DocumentAction.PAYMENT_REGISTERED,
                             "Pagamento registrato il " + paymentDate);
                     commissionService.updateAfterPayment(saved.getContractId(), saved.getAmount(),
-                            paymentRequest.getAmountPaid() != null ? paymentRequest.getAmountPaid() : saved.getAmount());
+                            requiredRequest.getAmountPaid() != null ? requiredRequest.getAmountPaid() : saved.getAmount());
                     statisticsService.clearCache();
-                    return InvoiceMapper.toDto(saved, invoiceLineRepository.findByInvoiceIdOrderById(saved.getId()));
+                    return InvoiceMapper.toDto(saved, invoiceLineRepository.findByInvoiceIdOrderById(savedId));
                 });
     }
 
     public List<DocumentHistoryDTO> history(Long id) {
-        return documentHistoryService.list(DocumentType.INVOICE, id).stream()
+        return documentHistoryService.list(DocumentType.INVOICE, Objects.requireNonNull(id, "id must not be null")).stream()
                 .map(DocumentHistoryMapper::toDto)
                 .toList();
     }
@@ -223,12 +239,15 @@ public class InvoiceService {
     }
 
     private void replaceInvoiceLines(Long invoiceId, List<InvoiceLine> lines) {
-        invoiceLineRepository.deleteByInvoiceId(invoiceId);
+        Long requiredInvoiceId = Objects.requireNonNull(invoiceId, "invoiceId must not be null");
+        invoiceLineRepository.deleteByInvoiceId(requiredInvoiceId);
         if (lines == null || lines.isEmpty()) {
             return;
         }
         for (InvoiceLine line : lines) {
-            invoiceLineRepository.save(line.withInvoice(invoiceId));
+            InvoiceLine toSave = Objects.requireNonNull(line, "invoice line must not be null")
+                    .withInvoice(requiredInvoiceId);
+            invoiceLineRepository.save(Objects.requireNonNull(toSave, "invoice line must not be null"));
         }
     }
 

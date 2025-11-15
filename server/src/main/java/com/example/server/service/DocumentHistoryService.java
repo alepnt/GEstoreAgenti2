@@ -16,6 +16,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -41,17 +42,21 @@ public class DocumentHistoryService {
 
     @CacheEvict(cacheNames = "documentHistorySearch", allEntries = true)
     public DocumentHistory log(DocumentType type, Long documentId, DocumentAction action, String description) {
-        DocumentHistory history = DocumentHistory.create(type, documentId, action, description, Instant.now(clock));
+        DocumentHistory history = Objects.requireNonNull(
+                DocumentHistory.create(type, documentId, action, description, Instant.now(clock)),
+                "document history must not be null");
         return repository.save(history);
     }
 
     public List<DocumentHistory> list(DocumentType type, Long documentId) {
-        return repository.findByDocumentTypeAndDocumentIdOrderByCreatedAtDesc(type, documentId);
+        DocumentType requiredType = Objects.requireNonNull(type, "type must not be null");
+        Long requiredDocumentId = Objects.requireNonNull(documentId, "documentId must not be null");
+        return repository.findByDocumentTypeAndDocumentIdOrderByCreatedAtDesc(requiredType, requiredDocumentId);
     }
 
     @Cacheable(cacheNames = "documentHistorySearch", key = "#query.cacheKey()")
     public DocumentHistoryPageDTO search(DocumentHistoryQuery query) {
-        DocumentHistoryQuery normalized = normalize(query, true);
+        DocumentHistoryQuery normalized = normalize(Objects.requireNonNull(query, "query must not be null"), true);
         DocumentHistoryQueryRepository.ResultPage resultPage = queryRepository.find(normalized);
         List<DocumentHistoryDTO> items = resultPage.items().stream()
                 .map(DocumentHistoryMapper::toDto)
@@ -60,7 +65,8 @@ public class DocumentHistoryService {
     }
 
     public byte[] exportCsv(DocumentHistoryQuery query) {
-        DocumentHistoryQuery normalized = normalize(query, false).withoutPagination();
+        DocumentHistoryQuery normalized = normalize(Objects.requireNonNull(query, "query must not be null"), false)
+                .withoutPagination();
         List<DocumentHistory> results = queryRepository.findAll(normalized);
         StringBuilder builder = new StringBuilder();
         builder.append("id;documentType;documentId;action;description;createdAt\n");

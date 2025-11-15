@@ -27,6 +27,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -71,11 +72,12 @@ public class UserService {
 
     @Transactional
     public AuthResponse loginWithMicrosoft(LoginRequest request) {
-        String delegatedToken = acquireDelegatedToken(request.accessToken());
+        LoginRequest requiredRequest = Objects.requireNonNull(request, "request must not be null");
+        String delegatedToken = acquireDelegatedToken(requiredRequest.accessToken());
 
-        User savedUser = userRepository.findByAzureId(request.azureId())
-                .map(user -> user.updateFromAzure(request.displayName(), request.email()))
-                .orElseGet(() -> registerAzureUser(request));
+        User savedUser = userRepository.findByAzureId(requiredRequest.azureId())
+                .map(user -> user.updateFromAzure(requiredRequest.displayName(), requiredRequest.email()))
+                .orElseGet(() -> registerAzureUser(requiredRequest));
 
         savedUser = userRepository.save(savedUser);
 
@@ -85,24 +87,26 @@ public class UserService {
 
     @Transactional
     public UserSummary register(RegisterRequest request) {
-        Long roleId = resolveRoleId(Optional.ofNullable(request.roleName()).filter(name -> !name.isBlank()).orElse(DEFAULT_ROLE));
-        Long teamId = resolveTeamId(Optional.ofNullable(request.teamName()).filter(name -> !name.isBlank()).orElse(DEFAULT_TEAM));
+        RegisterRequest requiredRequest = Objects.requireNonNull(request, "request must not be null");
+        Long roleId = resolveRoleId(Optional.ofNullable(requiredRequest.roleName()).filter(name -> !name.isBlank()).orElse(DEFAULT_ROLE));
+        Long teamId = resolveTeamId(Optional.ofNullable(requiredRequest.teamName()).filter(name -> !name.isBlank()).orElse(DEFAULT_TEAM));
 
-        User user = userRepository.findByAzureId(request.azureId())
-                .map(existing -> existing.updateFromAzure(request.displayName(), request.email()))
-                .orElseGet(() -> User.newAzureUser(request.azureId(), request.email(), request.displayName(), roleId, teamId))
+        User user = userRepository.findByAzureId(requiredRequest.azureId())
+                .map(existing -> existing.updateFromAzure(requiredRequest.displayName(), requiredRequest.email()))
+                .orElseGet(() -> User.newAzureUser(requiredRequest.azureId(), requiredRequest.email(), requiredRequest.displayName(), roleId, teamId))
                 .withRoleAndTeam(roleId, teamId);
 
-        if (request.password() != null && !request.password().isBlank()) {
-            user = user.withPasswordHash(hashPassword(request.password()));
+        if (requiredRequest.password() != null && !requiredRequest.password().isBlank()) {
+            user = user.withPasswordHash(hashPassword(requiredRequest.password()));
         }
 
         User saved = userRepository.save(user);
+        Long savedId = Objects.requireNonNull(saved.getId(), "user id must not be null");
 
-        if (request.agentCode() != null && !request.agentCode().isBlank()) {
-            Agent agent = agentRepository.findByUserId(saved.getId())
-                    .map(existing -> new Agent(existing.getId(), existing.getUserId(), request.agentCode(), existing.getTeamRole()))
-                    .orElse(Agent.forUser(saved.getId(), request.agentCode(), "Member"));
+        if (requiredRequest.agentCode() != null && !requiredRequest.agentCode().isBlank()) {
+            Agent agent = agentRepository.findByUserId(savedId)
+                    .map(existing -> new Agent(existing.getId(), existing.getUserId(), requiredRequest.agentCode(), existing.getTeamRole()))
+                    .orElse(Agent.forUser(savedId, requiredRequest.agentCode(), "Member"));
             agentRepository.save(agent);
         }
 
@@ -110,25 +114,29 @@ public class UserService {
     }
 
     private User registerAzureUser(LoginRequest request) {
+        LoginRequest requiredRequest = Objects.requireNonNull(request, "request must not be null");
         Long roleId = resolveRoleId(DEFAULT_ROLE);
         Long teamId = resolveTeamId(DEFAULT_TEAM);
-        return User.newAzureUser(request.azureId(), request.email(), request.displayName(), roleId, teamId);
+        return User.newAzureUser(requiredRequest.azureId(), requiredRequest.email(), requiredRequest.displayName(), roleId, teamId);
     }
 
     private Long resolveRoleId(String name) {
-        return roleRepository.findByName(name)
+        String requiredName = Objects.requireNonNull(name, "name must not be null");
+        return roleRepository.findByName(requiredName)
                 .map(Role::getId)
-                .orElseGet(() -> roleRepository.save(new Role(null, name)).getId());
+                .orElseGet(() -> roleRepository.save(new Role(null, requiredName)).getId());
     }
 
     private Long resolveTeamId(String name) {
-        return teamRepository.findByName(name)
+        String requiredName = Objects.requireNonNull(name, "name must not be null");
+        return teamRepository.findByName(requiredName)
                 .map(Team::getId)
-                .orElseGet(() -> teamRepository.save(new Team(null, name)).getId());
+                .orElseGet(() -> teamRepository.save(new Team(null, requiredName)).getId());
     }
 
     private UserSummary toSummary(User user) {
-        return new UserSummary(user.getId(), user.getEmail(), user.getDisplayName(), user.getAzureId(), user.getRoleId(), user.getTeamId());
+        User requiredUser = Objects.requireNonNull(user, "user must not be null");
+        return new UserSummary(requiredUser.getId(), requiredUser.getEmail(), requiredUser.getDisplayName(), requiredUser.getAzureId(), requiredUser.getRoleId(), requiredUser.getTeamId());
     }
 
     private String acquireDelegatedToken(String userAccessToken) {

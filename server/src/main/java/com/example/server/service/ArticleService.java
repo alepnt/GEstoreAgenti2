@@ -10,6 +10,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -28,37 +29,44 @@ public class ArticleService {
     }
 
     public Optional<ArticleDTO> findById(Long id) {
-        return articleRepository.findById(id).map(ArticleMapper::toDto);
+        return articleRepository.findById(Objects.requireNonNull(id, "id must not be null"))
+                .map(ArticleMapper::toDto);
     }
 
     @Transactional
     public ArticleDTO create(ArticleDTO dto) {
-        validate(dto);
-        Article source = ArticleMapper.fromDto(dto);
-        Article saved = articleRepository.save(Article.create(
+        ArticleDTO validatedDto = Objects.requireNonNull(dto, "article must not be null");
+        validate(validatedDto);
+        Article source = Objects.requireNonNull(ArticleMapper.fromDto(validatedDto),
+                "mapped article must not be null");
+        Article toSave = Objects.requireNonNull(Article.create(
                 normalize(source.getCode()),
                 normalize(source.getName()),
                 normalize(source.getDescription()),
                 normalizePrice(source.getUnitPrice()),
                 source.getVatRate(),
                 normalize(source.getUnitOfMeasure())
-        ));
+        ), "created article must not be null");
+        Article saved = articleRepository.save(toSave);
         return ArticleMapper.toDto(saved);
     }
 
     @Transactional
     public Optional<ArticleDTO> update(Long id, ArticleDTO dto) {
-        validate(dto);
-        return articleRepository.findById(id)
+        ArticleDTO validatedDto = Objects.requireNonNull(dto, "article must not be null");
+        validate(validatedDto);
+        return articleRepository.findById(Objects.requireNonNull(id, "id must not be null"))
                 .map(existing -> {
-                    Article updated = existing.updateFrom(Article.create(
-                            normalize(dto.getCode()),
-                            normalize(dto.getName()),
-                            normalize(dto.getDescription()),
-                            normalizePrice(dto.getUnitPrice()),
-                            dto.getVatRate(),
-                            normalize(dto.getUnitOfMeasure())
-                    ));
+                    Article updateSource = Objects.requireNonNull(Article.create(
+                            normalize(validatedDto.getCode()),
+                            normalize(validatedDto.getName()),
+                            normalize(validatedDto.getDescription()),
+                            normalizePrice(validatedDto.getUnitPrice()),
+                            validatedDto.getVatRate(),
+                            normalize(validatedDto.getUnitOfMeasure())
+                    ), "created article must not be null");
+                    Article updated = Objects.requireNonNull(existing.updateFrom(updateSource),
+                            "updated article must not be null");
                     Article saved = articleRepository.save(updated);
                     return ArticleMapper.toDto(saved);
                 });
@@ -66,7 +74,7 @@ public class ArticleService {
 
     @Transactional
     public boolean delete(Long id) {
-        return articleRepository.findById(id)
+        return articleRepository.findById(Objects.requireNonNull(id, "id must not be null"))
                 .map(existing -> {
                     articleRepository.deleteById(id);
                     return true;
@@ -75,7 +83,7 @@ public class ArticleService {
     }
 
     public Article require(Long id) {
-        return articleRepository.findById(id)
+        return articleRepository.findById(Objects.requireNonNull(id, "id must not be null"))
                 .orElseThrow(() -> new IllegalArgumentException("Articolo non trovato"));
     }
 
