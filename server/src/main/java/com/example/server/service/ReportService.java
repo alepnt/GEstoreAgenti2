@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 @Service
 public class ReportService {
@@ -94,7 +95,7 @@ public class ReportService {
     }
 
     private List<InvoiceReportRow> collectRows(LocalDate from, LocalDate to, Long agentId) {
-        Map<Long, Contract> contractCache = new HashMap<>();
+        Map<Long, Optional<Contract>> contractCache = new HashMap<>();
         List<InvoiceReportRow> rows = new ArrayList<>();
         for (Invoice invoice : invoiceRepository.findAllByOrderByIssueDateDesc()) {
             if (invoice.getStatus() != InvoiceStatus.PAID) {
@@ -110,9 +111,9 @@ public class ReportService {
             Long contractId = invoice.getContractId();
             Long invoiceAgentId = null;
             if (contractId != null) {
-                Contract contract = contractCache.computeIfAbsent(contractId, id -> contractRepository.findById(id).orElse(null));
-                if (contract != null) {
-                    invoiceAgentId = contract.getAgentId();
+                Optional<Contract> contract = contractCache.computeIfAbsent(contractId, id -> contractRepository.findById(id));
+                if (contract.isPresent()) {
+                    invoiceAgentId = contract.get().getAgentId();
                 }
             }
             if (agentId != null && !Objects.equals(agentId, invoiceAgentId)) {

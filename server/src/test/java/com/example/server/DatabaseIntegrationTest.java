@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers
 class DatabaseIntegrationTest {
 
+    @SuppressWarnings({"resource", "unused"})
     @Container
     @ServiceConnection
     static final MSSQLServerContainer<?> database =
@@ -42,10 +43,10 @@ class DatabaseIntegrationTest {
     @Test
     void shouldConfigureHikariConnectionPool() {
         DataSource dataSource = jdbcTemplate.getDataSource();
-        assertThat(dataSource).isInstanceOf(HikariDataSource.class);
-
-        HikariDataSource hikariDataSource = (HikariDataSource) dataSource;
-        assertThat(hikariDataSource.getPoolName()).isEqualTo("GestoreAgentiPool");
-        assertThat(hikariDataSource.getMaximumPoolSize()).isEqualTo(10);
+        assertThat(dataSource)
+                .isInstanceOfSatisfying(HikariDataSource.class, hikariDataSource -> {
+                    assertThat(hikariDataSource.getPoolName()).isEqualTo("GestoreAgentiPool");
+                    assertThat(hikariDataSource.getMaximumPoolSize()).isEqualTo(10);
+                });
     }
 }

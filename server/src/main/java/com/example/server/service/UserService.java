@@ -76,10 +76,11 @@ public class UserService {
         String delegatedToken = acquireDelegatedToken(requiredRequest.accessToken());
 
         User savedUser = userRepository.findByAzureId(requiredRequest.azureId())
-                .map(user -> user.updateFromAzure(requiredRequest.displayName(), requiredRequest.email()))
+                .map(user -> Objects.requireNonNull(user.updateFromAzure(requiredRequest.displayName(), requiredRequest.email()),
+                        "updated user must not be null"))
                 .orElseGet(() -> registerAzureUser(requiredRequest));
 
-        savedUser = userRepository.save(savedUser);
+        savedUser = Objects.requireNonNull(userRepository.save(savedUser), "saved user must not be null");
 
         Instant expiresAt = Instant.now(clock).plusSeconds(3600);
         return new AuthResponse(delegatedToken, "Bearer", expiresAt, toSummary(savedUser));
@@ -100,14 +101,15 @@ public class UserService {
             user = user.withPasswordHash(hashPassword(requiredRequest.password()));
         }
 
-        User saved = userRepository.save(user);
+        User saved = Objects.requireNonNull(userRepository.save(user), "saved user must not be null");
         Long savedId = Objects.requireNonNull(saved.getId(), "user id must not be null");
 
         if (requiredRequest.agentCode() != null && !requiredRequest.agentCode().isBlank()) {
             Agent agent = agentRepository.findByUserId(savedId)
                     .map(existing -> new Agent(existing.getId(), existing.getUserId(), requiredRequest.agentCode(), existing.getTeamRole()))
-                    .orElse(Agent.forUser(savedId, requiredRequest.agentCode(), "Member"));
-            agentRepository.save(agent);
+                    .orElseGet(() -> Objects.requireNonNull(Agent.forUser(savedId, requiredRequest.agentCode(), "Member"),
+                            "agent must not be null"));
+            agentRepository.save(Objects.requireNonNull(agent, "agent must not be null"));
         }
 
         return toSummary(saved);

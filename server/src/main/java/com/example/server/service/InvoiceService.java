@@ -92,7 +92,7 @@ public class InvoiceService {
                 null,
                 null
         );
-        Invoice saved = invoiceRepository.save(invoice);
+        Invoice saved = Objects.requireNonNull(invoiceRepository.save(invoice), "saved invoice must not be null");
         Long savedId = Objects.requireNonNull(saved.getId(), "invoice id must not be null");
         replaceInvoiceLines(savedId, lines);
         documentHistoryService.log(DocumentType.INVOICE, savedId, DocumentAction.CREATED,
@@ -127,7 +127,7 @@ public class InvoiceService {
                             existing.getCreatedAt(),
                             existing.getUpdatedAt()
                     );
-                    Invoice saved = invoiceRepository.save(updated);
+                    Invoice saved = Objects.requireNonNull(invoiceRepository.save(updated), "saved invoice must not be null");
                     Long savedId = Objects.requireNonNull(saved.getId(), "invoice id must not be null");
                     replaceInvoiceLines(savedId, lines);
                     documentHistoryService.log(DocumentType.INVOICE, savedId, DocumentAction.UPDATED, "Fattura aggiornata");
@@ -164,7 +164,9 @@ public class InvoiceService {
         LocalDate paymentDate = requiredRequest.getPaymentDate() != null ? requiredRequest.getPaymentDate() : LocalDate.now();
         return invoiceRepository.findById(Objects.requireNonNull(id, "id must not be null"))
                 .map(invoice -> {
-                    Invoice saved = invoiceRepository.save(invoice.registerPayment(paymentDate, InvoiceStatus.PAID));
+                    Invoice saved = Objects.requireNonNull(
+                            invoiceRepository.save(invoice.registerPayment(paymentDate, InvoiceStatus.PAID)),
+                            "saved invoice must not be null");
                     Long savedId = Objects.requireNonNull(saved.getId(), "invoice id must not be null");
                     documentHistoryService.log(DocumentType.INVOICE, savedId, DocumentAction.PAYMENT_REGISTERED,
                             "Pagamento registrato il " + paymentDate);

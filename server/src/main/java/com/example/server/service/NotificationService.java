@@ -110,7 +110,8 @@ public class NotificationService {
         var listener = new java.util.concurrent.atomic.AtomicBoolean(true);
         java.util.function.Consumer<Notification> consumer = notification -> {
             if (listener.getAndSet(false)) {
-                requiredDeferredResult.setResult(List.of(toResponse(notification)));
+                NotificationResponse response = toResponse(Objects.requireNonNull(notification, "notification must not be null"));
+                requiredDeferredResult.setResult(List.of(response));
             }
         };
 
@@ -122,7 +123,8 @@ public class NotificationService {
         Runnable cancelAction = () -> subscriptions.forEach(NotificationPublisher.Subscription::cancel);
         requiredDeferredResult.onCompletion(cancelAction);
         requiredDeferredResult.onTimeout(() -> {
-            requiredDeferredResult.setResult(List.of());
+            List<NotificationResponse> emptyResult = List.of();
+            requiredDeferredResult.setResult(emptyResult);
             cancelAction.run();
         });
     }

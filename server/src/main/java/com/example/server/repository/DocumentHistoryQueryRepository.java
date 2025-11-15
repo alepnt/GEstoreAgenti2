@@ -10,8 +10,6 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -25,24 +23,21 @@ public class DocumentHistoryQueryRepository {
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
-    private static final RowMapper<DocumentHistory> ROW_MAPPER = new RowMapper<>() {
-        @Override
-        public DocumentHistory mapRow(ResultSet rs, int rowNum) throws SQLException {
-            Long id = rs.getLong("id");
-            String documentType = rs.getString("document_type");
-            Long documentId = rs.getObject("document_id") != null ? rs.getLong("document_id") : null;
-            String action = rs.getString("action");
-            String description = rs.getString("description");
-            Instant createdAt = rs.getTimestamp("created_at").toInstant();
-            return new DocumentHistory(
-                    id,
-                    documentType != null ? DocumentType.valueOf(documentType) : null,
-                    documentId,
-                    action != null ? DocumentAction.valueOf(action) : null,
-                    description,
-                    createdAt
-            );
-        }
+    private static final RowMapper<DocumentHistory> ROW_MAPPER = (rs, rowNum) -> {
+        Long id = rs.getLong("id");
+        String documentType = rs.getString("document_type");
+        Long documentId = rs.getObject("document_id") != null ? rs.getLong("document_id") : null;
+        String action = rs.getString("action");
+        String description = rs.getString("description");
+        Instant createdAt = rs.getTimestamp("created_at").toInstant();
+        return new DocumentHistory(
+                id,
+                documentType != null ? DocumentType.valueOf(documentType) : null,
+                documentId,
+                action != null ? DocumentAction.valueOf(action) : null,
+                description,
+                createdAt
+        );
     };
 
     public DocumentHistoryQueryRepository(NamedParameterJdbcTemplate jdbcTemplate) {
@@ -64,7 +59,8 @@ public class DocumentHistoryQueryRepository {
         List<DocumentHistory> items = jdbcTemplate.query(sql.toString(), parameters,
                 Objects.requireNonNull(ROW_MAPPER, "rowMapper must not be null"));
         Long totalCount = query.isPaginated()
-                ? jdbcTemplate.queryForObject("SELECT COUNT(*) " + fromClause, parameters, Long.class)
+                ? Objects.requireNonNull(jdbcTemplate.queryForObject("SELECT COUNT(*) " + fromClause, parameters, Long.class),
+                "totalCount must not be null")
                 : null;
         long total = totalCount != null ? totalCount : items.size();
         return new ResultPage(items, total);
@@ -103,9 +99,11 @@ public class DocumentHistoryQueryRepository {
             fromClause.append(" AND created_at <= :to");
             parameters.addValue("to", query.getTo());
         }
-        if (StringUtils.hasText(query.getSearchText())) {
+        String searchText = query.getSearchText();
+        if (StringUtils.hasText(searchText)) {
+            String normalizedSearch = Objects.requireNonNull(searchText, "searchText must not be null");
             fromClause.append(" AND LOWER(description) LIKE :search");
-            parameters.addValue("search", "%" + query.getSearchText().toLowerCase() + "%");
+            parameters.addValue("search", "%" + normalizedSearch.toLowerCase() + "%");
         }
         return new QueryParts(fromClause.toString(), parameters);
     }

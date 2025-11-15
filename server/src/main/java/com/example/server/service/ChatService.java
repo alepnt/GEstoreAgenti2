@@ -25,6 +25,8 @@ import java.util.stream.StreamSupport;
 @Service
 public class ChatService {
 
+    private static final String TEAM_PREFIX = "team:";
+
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final ChatPublisher chatPublisher;
@@ -102,14 +104,16 @@ public class ChatService {
 
         subscriptions.add(chatPublisher.subscribe(requiredConversationId, message -> {
             if (pending.getAndSet(false)) {
-                requiredDeferredResult.setResult(List.of(message));
+                ChatMessageResponse nonNullMessage = Objects.requireNonNull(message, "message must not be null");
+                requiredDeferredResult.setResult(List.of(nonNullMessage));
             }
         }));
 
         Runnable cancel = () -> subscriptions.forEach(ChatPublisher.Subscription::cancel);
         requiredDeferredResult.onCompletion(cancel);
         requiredDeferredResult.onTimeout(() -> {
-            requiredDeferredResult.setResult(List.of());
+            List<ChatMessageResponse> emptyResult = List.of();
+            requiredDeferredResult.setResult(emptyResult);
             cancel.run();
         });
     }
@@ -127,15 +131,16 @@ public class ChatService {
     }
 
     private boolean canAccessConversation(User user, String conversationId) {
-        if (conversationId.startsWith("team:")) {
-            Long teamId = Long.parseLong(conversationId.substring("team:".length()));
-            return teamId.equals(user.getTeamId());
+        if (conversationId.startsWith(TEAM_PREFIX)) {
+            long teamId = Long.parseLong(conversationId, TEAM_PREFIX.length(), conversationId.length(), 10);
+            Long userTeamId = user.getTeamId();
+            return userTeamId != null && userTeamId.longValue() == teamId;
         }
         return true;
     }
 
     private String buildConversationTitle(String conversationId, User user) {
-        if (conversationId.startsWith("team:")) {
+        if (conversationId.startsWith(TEAM_PREFIX)) {
             return "Team " + Optional.ofNullable(user.getTeamId()).map(Object::toString).orElse("sconosciuto");
         }
         return conversationId;
