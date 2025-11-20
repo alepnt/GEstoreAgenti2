@@ -81,6 +81,8 @@ public class MsalTokenProvider implements TokenProvider {
             throw asAuthenticationException("acquisizione silenziosa", root);
         } catch (MsalException ex) {
             throw asAuthenticationException("acquisizione silenziosa", ex);
+        } catch (MalformedURLException ex) {
+            throw new MsalAuthenticationException("Configurazione MSAL non valida: " + ex.getMessage(), ex);
         }
     }
 
@@ -97,8 +99,6 @@ public class MsalTokenProvider implements TokenProvider {
             throw asAuthenticationException("acquisizione interattiva", unwrap(ex));
         } catch (MsalException ex) {
             throw asAuthenticationException("acquisizione interattiva", ex);
-        } catch (MalformedURLException ex) {
-            throw new MsalAuthenticationException("URI di redirect MSAL non valido: " + ex.getMessage(), ex);
         }
     }
 
