@@ -77,6 +77,7 @@ class LoginUiTest extends ApplicationTest {
     public void start(Stage stage) throws IOException {
         this.primaryStage = stage;
         ensureDependenciesInitialized();
+        mainViewFactory.setFallbackStage(primaryStage);
         loadLoginScene();
     }
 
@@ -135,6 +136,7 @@ class LoginUiTest extends ApplicationTest {
                 throw new RuntimeException("Impossibile ottenere lo stage di test", e);
             }
         }
+        mainViewFactory.setFallbackStage(primaryStage);
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/example/client/view/LoginView.fxml"));
         loader.setControllerFactory(type -> {
             if (type == LoginController.class) {
@@ -187,6 +189,7 @@ class LoginUiTest extends ApplicationTest {
         if (mainViewFactory == null) {
             mainViewFactory = new UiTestFixtures.StubMainViewFactory();
         }
+        mainViewFactory.setFallbackStage(primaryStage);
         if (tokenProvider == null) {
             tokenProvider = new UiTestFixtures.StubTokenProvider();
         }

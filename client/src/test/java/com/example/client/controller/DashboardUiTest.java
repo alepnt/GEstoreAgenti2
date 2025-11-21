@@ -86,7 +86,7 @@ class DashboardUiTest extends ApplicationTest {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/example/client/view/MainView.fxml"));
         loader.setControllerFactory(type -> {
             if (type == MainViewController.class) {
-                return new UiTestFixtures.StubMainViewController(session, sessionStore);
+                return new UiTestFixtures.StubMainViewController(session, sessionStore, primaryStage);
             }
             throw new IllegalStateException("Controller non gestito: " + type.getName());
         });
