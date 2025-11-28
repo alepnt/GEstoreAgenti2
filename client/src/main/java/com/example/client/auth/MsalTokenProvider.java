@@ -81,6 +81,8 @@ public class MsalTokenProvider implements TokenProvider {
             throw asAuthenticationException("acquisizione silenziosa", root);
         } catch (MsalException ex) {
             throw asAuthenticationException("acquisizione silenziosa", ex);
+        } catch (MalformedURLException ex) {
+            throw new MsalAuthenticationException("Configurazione MSAL non valida: " + ex.getMessage(), ex);
         }
     }
 
