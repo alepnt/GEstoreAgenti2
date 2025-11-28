@@ -14,6 +14,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 class NotificationSubscriptionServiceTest {
 
@@ -67,8 +68,8 @@ class NotificationSubscriptionServiceTest {
 
         assertThat(service.list(null)).extracting(NotificationSubscriptionDTO::getId, NotificationSubscriptionDTO::getChannel)
                 .containsExactly(
-                        new Object[]{first.getId(), "EMAIL"},
-                        new Object[]{second.getId(), "PUSH"}
+                        tuple(first.getId(), "EMAIL"),
+                        tuple(second.getId(), "PUSH")
                 );
 
         assertThat(service.list(2L)).extracting(NotificationSubscriptionDTO::getId)

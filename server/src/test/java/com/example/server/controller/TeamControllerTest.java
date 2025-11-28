@@ -47,22 +47,22 @@ class TeamControllerTest {
     @DisplayName("List teams returns collection payload")
     void listTeams() throws Exception {
         List<TeamDTO> teams = List.of(
-                new TeamDTO(1L, "North", "NRT"),
-                new TeamDTO(2L, "South", "STH")
+                new TeamDTO(1L, "North"),
+                new TeamDTO(2L, "South")
         );
         when(teamService.findAll()).thenReturn(teams);
 
         mockMvc.perform(get("/api/teams"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("North"))
-                .andExpect(jsonPath("$[1].code").value("STH"));
+                .andExpect(jsonPath("$[1].name").value("South"));
     }
 
     @Test
     @DisplayName("Create team returns persisted entity")
     void createTeam() throws Exception {
-        TeamDTO request = new TeamDTO(null, "East", "EST");
-        TeamDTO saved = new TeamDTO(4L, "East", "EST");
+        TeamDTO request = new TeamDTO(null, "East");
+        TeamDTO saved = new TeamDTO(4L, "East");
         when(teamService.create(any(TeamDTO.class))).thenReturn(saved);
 
         mockMvc.perform(post("/api/teams")
@@ -70,7 +70,7 @@ class TeamControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(4))
-                .andExpect(jsonPath("$.code").value("EST"));
+                .andExpect(jsonPath("$.name").value("East"));
     }
 
     @Test
@@ -78,7 +78,7 @@ class TeamControllerTest {
     void updateTeamNotFound() throws Exception {
         when(teamService.update(eq(6L), any(TeamDTO.class))).thenReturn(Optional.empty());
 
-        TeamDTO request = new TeamDTO(null, "West", "WST");
+        TeamDTO request = new TeamDTO(null, "West");
 
         mockMvc.perform(put("/api/teams/6")
                         .contentType(APPLICATION_JSON)

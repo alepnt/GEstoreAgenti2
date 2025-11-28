@@ -1,6 +1,7 @@
 package com.example.server.service;
 
 import com.example.server.repository.NotificationSubscriptionRepository;
+import com.example.server.repository.StatisticsRepository;
 import com.example.server.repository.UserRepository;
 
 import java.time.Clock;
