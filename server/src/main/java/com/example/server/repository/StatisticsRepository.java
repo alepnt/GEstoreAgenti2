@@ -18,18 +18,18 @@ public class StatisticsRepository {                                    // Reposi
     }
 
     public List<Integer> findAvailableYears(String paidStatus) {       // Restituisce gli anni disponibili in base allo stato di pagamento.
-        String sql = """                                               // Query SQL multi-linea per estrarre anni distinti dai pagamenti.
+        String sql = """
                 SELECT DISTINCT EXTRACT(YEAR FROM i."payment_date") AS payment_year
                 FROM "invoices" i
                 WHERE i."status" = :paidStatus AND i."payment_date" IS NOT NULL
                 ORDER BY payment_year
-                """;
+                """;                                                   // Query SQL multi-linea per estrarre anni distinti dai pagamenti.
         MapSqlParameterSource params = new MapSqlParameterSource("paidStatus", paidStatus); // Parametro nominato per lo stato.
         return jdbcTemplate.query(sql, params, (rs, rowNum) -> rs.getInt("payment_year"));  // Esegue la query e mappa l'anno come intero.
     }
 
     public List<MonthlyAggregate> findMonthlyTotals(int year, String paidStatus) { // Aggrega i totali mensili di un anno.
-        String sql = """                                               // Query che somma gli importi per mese e anno dei pagamenti.
+        String sql = """
                 SELECT EXTRACT(YEAR FROM i."payment_date") AS payment_year,
                        EXTRACT(MONTH FROM i."payment_date") AS payment_month,
                        SUM(i."amount") AS total_amount
@@ -37,7 +37,7 @@ public class StatisticsRepository {                                    // Reposi
                 WHERE i."status" = :paidStatus AND i."payment_date" IS NOT NULL AND EXTRACT(YEAR FROM i."payment_date") = :year
                 GROUP BY EXTRACT(YEAR FROM i."payment_date"), EXTRACT(MONTH FROM i."payment_date")
                 ORDER BY payment_month
-                """;
+                """;                                                   // Query che somma gli importi per mese e anno dei pagamenti.
         MapSqlParameterSource params = new MapSqlParameterSource()     // Collezione di parametri SQL nominati.
                 .addValue("paidStatus", paidStatus)                    // Aggiunge filtro stato.
                 .addValue("year", year);                               // Aggiunge filtro anno.
@@ -51,7 +51,7 @@ public class StatisticsRepository {                                    // Reposi
     }
 
     public List<AgentAggregate> findAgentTotals(int year, String paidStatus) { // Aggrega i totali per agente e team.
-        String sql = """                                               // Query che unisce invoice, contracts, agents, users e teams.
+        String sql = """
                 SELECT a."id" AS agent_id,
                        u."display_name" AS agent_name,
                        t."id" AS team_id,
@@ -65,7 +65,7 @@ public class StatisticsRepository {                                    // Reposi
                 WHERE i."status" = :paidStatus AND i."payment_date" IS NOT NULL AND EXTRACT(YEAR FROM i."payment_date") = :year
                 GROUP BY a."id", u."display_name", t."id", t."name"
                 ORDER BY total_amount DESC
-                """;
+                """;                                                   // Query che unisce invoice, contracts, agents, users e teams.
 
         MapSqlParameterSource params = new MapSqlParameterSource()     // Parametri nominati per filtrare anno e stato.
                 .addValue("year", year)
@@ -82,7 +82,7 @@ public class StatisticsRepository {                                    // Reposi
     }
 
     public List<TeamAggregate> findTeamTotals(int year, String paidStatus) { // Aggrega i totali dei team.
-        String sql = """                                               // Query che somma gli importi raggruppati per team.
+        String sql = """
                 SELECT t."id" AS team_id,
                        t."name" AS team_name,
                        SUM(i."amount") AS total_amount
@@ -94,7 +94,7 @@ public class StatisticsRepository {                                    // Reposi
                 WHERE i."status" = :paidStatus AND i."payment_date" IS NOT NULL AND EXTRACT(YEAR FROM i."payment_date") = :year
                 GROUP BY t."id", t."name"
                 ORDER BY total_amount DESC
-                """;
+                """;                                                   // Query che somma gli importi raggruppati per team.
 
         MapSqlParameterSource params = new MapSqlParameterSource()     // Parametri della query.
                 .addValue("year", year)
