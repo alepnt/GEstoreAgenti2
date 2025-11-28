@@ -3,123 +3,103 @@ package com.example.server.service;
 import com.example.common.dto.NotificationSubscriptionDTO;
 import com.example.server.domain.NotificationSubscription;
 import com.example.server.domain.User;
-import com.example.server.repository.NotificationSubscriptionRepository;
-import com.example.server.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
 class NotificationSubscriptionServiceTest {
 
-    private static final Instant FIXED_INSTANT = Instant.parse("2024-02-10T08:00:00Z");
-
-    @Mock
-    private NotificationSubscriptionRepository subscriptionRepository;
-
-    @Mock
-    private UserRepository userRepository;
-
+    private FakeNotificationSubscriptionRepository subscriptionRepository;
+    private FakeUserRepository userRepository;
+    private Clock clock;
     private NotificationSubscriptionService service;
 
     @BeforeEach
     void setUp() {
-        service = new NotificationSubscriptionService(subscriptionRepository, userRepository,
-                Clock.fixed(FIXED_INSTANT, ZoneOffset.UTC));
+        subscriptionRepository = new FakeNotificationSubscriptionRepository();
+        userRepository = new FakeUserRepository();
+        clock = Clock.fixed(Instant.parse("2024-03-02T10:15:30Z"), ZoneOffset.UTC);
+        service = InstantiationService.notificationSubscriptionService(subscriptionRepository, userRepository, clock);
+
+        userRepository.save(new User(1L, "az-1", "one@example.com", "Mario Rossi", null, 10L, 20L, true, LocalDateTime.now()));
+        userRepository.save(new User(2L, "az-2", "two@example.com", "Luisa Bianchi", null, 11L, 21L, true, LocalDateTime.now()));
     }
 
     @Test
-    void shouldDefaultCreatedAtWhenMissing() {
-        NotificationSubscriptionDTO payload = new NotificationSubscriptionDTO();
-        payload.setUserId(17L);
-        payload.setChannel("  email  ");
-        payload.setCreatedAt(null);
+    void createNormalizesChannelAndAssignsTimestamp() {
+        NotificationSubscriptionDTO dto = new NotificationSubscriptionDTO(null, 1L, "  EMAIL  ", null);
 
-        when(userRepository.findById(17L)).thenReturn(Optional.of(new User(17L, "azure", "user@example.com",
-                "User", null, 1L, 2L, Boolean.TRUE, LocalDateTime.now())));
-        when(subscriptionRepository.save(any())).thenAnswer(invocation -> {
-            NotificationSubscription toSave = invocation.getArgument(0);
-            return toSave.withId(55L);
-        });
+        NotificationSubscriptionDTO saved = service.create(dto);
 
-        NotificationSubscriptionDTO created = service.create(payload);
-
-        ArgumentCaptor<NotificationSubscription> stored = ArgumentCaptor.forClass(NotificationSubscription.class);
-        verify(subscriptionRepository).save(stored.capture());
-
-        assertThat(stored.getValue().getCreatedAt()).isEqualTo(FIXED_INSTANT);
-        assertThat(stored.getValue().getChannel()).isEqualTo("email");
-        assertThat(created.getCreatedAt()).isEqualTo(FIXED_INSTANT);
+        assertThat(saved.getId()).isNotNull();
+        assertThat(saved.getChannel()).isEqualTo("EMAIL");
+        assertThat(saved.getCreatedAt()).isEqualTo(Instant.parse("2024-03-02T10:15:30Z"));
     }
 
     @Test
-    void shouldFailWhenUserIdMissing() {
-        NotificationSubscriptionDTO payload = new NotificationSubscriptionDTO();
-        payload.setChannel("email");
+    void createRejectsMissingData() {
+        NotificationSubscriptionDTO missingUser = new NotificationSubscriptionDTO(null, null, "SMS", null);
+        NotificationSubscriptionDTO missingChannel = new NotificationSubscriptionDTO(null, 1L, " ", null);
 
-        assertThatThrownBy(() -> service.create(payload))
+        assertThatThrownBy(() -> service.create(null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("subscription must not be null");
+        assertThatThrownBy(() -> service.create(missingUser))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("L'utente è obbligatorio");
+        assertThatThrownBy(() -> service.create(missingChannel))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Il canale è obbligatorio");
     }
 
     @Test
-    void shouldListSubscriptionsForUserSortedByCreationDate() {
-        when(userRepository.findById(7L)).thenReturn(Optional.of(new User(7L, "azure", "user@example.com",
-                "User", null, 1L, 2L, Boolean.TRUE, LocalDateTime.now())));
-        NotificationSubscription first = new NotificationSubscription(1L, 7L, " email ", FIXED_INSTANT.minusSeconds(10));
-        NotificationSubscription second = new NotificationSubscription(2L, 7L, "email", FIXED_INSTANT);
-        when(subscriptionRepository.findByUserId(7L)).thenReturn(List.of(second, first));
+    void listOrdersByCreationAndNormalizesChannel() {
+        NotificationSubscription first = subscriptionRepository.save(NotificationSubscription.create(1L, " EMAIL", Instant.parse("2024-03-01T00:00:00Z")));
+        NotificationSubscription second = subscriptionRepository.save(NotificationSubscription.create(2L, "PUSH", Instant.parse("2024-03-05T00:00:00Z")));
 
-        var results = service.list(7L);
+        assertThat(service.list(null)).extracting(NotificationSubscriptionDTO::getId, NotificationSubscriptionDTO::getChannel)
+                .containsExactly(
+                        new Object[]{first.getId(), "EMAIL"},
+                        new Object[]{second.getId(), "PUSH"}
+                );
 
-        assertThat(results).extracting(NotificationSubscriptionDTO::getId).containsExactly(1L, 2L);
-        assertThat(results).allMatch(dto -> "email".equals(dto.getChannel()));
+        assertThat(service.list(2L)).extracting(NotificationSubscriptionDTO::getId)
+                .containsExactly(second.getId());
     }
 
     @Test
-    void shouldUpdateExistingSubscriptionAndPreserveCreatedAtWhenMissing() {
-        NotificationSubscription existing = new NotificationSubscription(3L, 9L, "webhook", FIXED_INSTANT);
-        NotificationSubscriptionDTO update = new NotificationSubscriptionDTO();
-        update.setUserId(9L);
-        update.setChannel("   webhook-updated   ");
+    void updatePreservesCreatedAtWhenMissingAndValidatesUser() {
+        NotificationSubscription saved = subscriptionRepository.save(NotificationSubscription.create(1L, "SMS", Instant.parse("2024-03-01T00:00:00Z")));
+        NotificationSubscriptionDTO toUpdate = new NotificationSubscriptionDTO(saved.getId(), 1L, "  sms  ", null);
 
-        when(subscriptionRepository.findById(3L)).thenReturn(Optional.of(existing));
-        when(userRepository.findById(9L)).thenReturn(Optional.of(new User(9L, "azure", "mail@example.com",
-                "User", null, 1L, 2L, Boolean.TRUE, LocalDateTime.now())));
-        when(subscriptionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        Optional<NotificationSubscriptionDTO> updated = service.update(saved.getId(), toUpdate);
 
-        Optional<NotificationSubscriptionDTO> result = service.update(3L, update);
+        assertThat(updated).isPresent();
+        assertThat(updated.get().getChannel()).isEqualTo("sms");
+        assertThat(updated.get().getCreatedAt()).isEqualTo(saved.getCreatedAt());
 
-        assertThat(result).isPresent();
-        NotificationSubscriptionDTO dto = result.orElseThrow();
-        assertThat(dto.getChannel()).isEqualTo("webhook-updated");
-        assertThat(dto.getCreatedAt()).isEqualTo(FIXED_INSTANT);
+        assertThatThrownBy(() -> service.update(null, toUpdate))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessage("id must not be null");
+        assertThatThrownBy(() -> service.update(saved.getId(), new NotificationSubscriptionDTO(saved.getId(), 99L, "sms", null)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Utente non trovato: 99");
     }
 
     @Test
-    void shouldReturnFalseWhenDeletingMissingSubscription() {
-        when(subscriptionRepository.findById(44L)).thenReturn(Optional.empty());
+    void deleteReturnsTrueOnlyWhenEntityExists() {
+        NotificationSubscription saved = subscriptionRepository.save(NotificationSubscription.create(1L, "SMS", Instant.now(clock)));
 
-        boolean deleted = service.delete(44L);
-
-        assertThat(deleted).isFalse();
-        verify(subscriptionRepository, never()).delete(any());
+        assertThat(service.delete(saved.getId())).isTrue();
+        assertThat(subscriptionRepository.count()).isZero();
+        assertThat(service.delete(999L)).isFalse();
     }
 }
