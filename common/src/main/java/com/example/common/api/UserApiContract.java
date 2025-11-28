@@ -9,7 +9,7 @@ import java.util.Optional;                                // Usato per risultati
  * Contratto API condiviso per la gestione degli utenti applicativi.
  * Definisce le operazioni CRUD fondamentali a livello di amministrazione utenti.
  */
-public interface UserApiContract; {                       // Interfaccia che espone i metodi di gestione degli utenti.
+public interface UserApiContract {                        // Interfaccia che espone i metodi di gestione degli utenti.
 
     List<UserDTO> listUsers();                            // Restituisce l'elenco completo degli utenti presenti nel sistema.
 
